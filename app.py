@@ -17,7 +17,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Environment detection
 DEVELOPMENT = os.environ.get('ENV') == 'development' or app.debug
-# print({os.environ.get('ENV')})
+print({os.environ.get('ENV')})
 print(f"Running in {'development' if DEVELOPMENT else 'production'} mode")
 
 # Allowed file extensions
