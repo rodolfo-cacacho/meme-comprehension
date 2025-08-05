@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Evaluate Meme - Meme Benchmark{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Evaluate Meme</h1>
+            <span class="badge bg-info fs-6">Progress: {{ evaluation_count }}/10</span>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body text-center">
+                <img src="{{ url_for('uploaded_file', filename=meme.filename) }}" 
+                     class="meme-img mb-3" 
+                     alt="{{ meme.original_filename }}">
+                <h5 class="card-title">{{ meme.original_filename }}</h5>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h4 class="card-title mb-4">Choose the best description for this meme:</h4>
+                
+                <form method="post" action="{{ url_for('submit_evaluation') }}">
+                    <input type="hidden" name="meme_id" value="{{ meme.id }}">
+                    
+                    <div class="row">
+                        {% for desc_num, description in descriptions %}
+                        <div class="col-md-6 mb-3">
+                            <label class="evaluation-card w-100">
+                                <input type="radio" name="chosen_description" value="{{ desc_num }}" 
+                                       class="d-none" required>
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Option {{ loop.index }}</h6>
+                                        <p class="card-text">{{ description }}</p>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">Submit Evaluation</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

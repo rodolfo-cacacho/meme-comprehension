@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Statistics - Meme Benchmark{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">📈 Benchmark Statistics</h1>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <h2 class="card-title text-primary">{{ total_memes }}</h2>
+                <p class="card-text">Total Memes</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <h2 class="card-title text-success">{{ total_evaluations }}</h2>
+                <p class="card-text">Total Evaluations</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <h2 class="card-title text-info">{{ unique_evaluators }}</h2>
+                <p class="card-text">Unique Contributors</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h4 class="card-title">About This Benchmark</h4>
+        <p class="card-text">
+            This crowd-sourced meme benchmark collects human evaluations of meme descriptions 
+            to help train AI systems to better understand humor, cultural references, and visual context. 
+            Each meme has 4 different descriptions, and users vote on which description best captures 
+            the essence of the meme.
+        </p>
+        <a href="{{ url_for('index') }}" class="btn btn-primary">Contribute Now</a>
+    </div>
+</div>
+{% endblock %}
