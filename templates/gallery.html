@@ -17,8 +17,6 @@
                      class="card-img-top gallery-img" 
                      alt="{{ meme.original_filename }}">
                 <div class="card-body">
-                    <h5 class="card-title">{{ meme.original_filename }}</h5>
-                    
                     <div class="accordion" id="accordion{{ meme.id }}">
                         <div class="accordion-item">
                             <h2 class="accordion-header">
@@ -39,7 +37,7 @@
                     </div>
                     
                     <small class="text-muted d-block mt-2">
-                        Uploaded: {{ meme.upload_date }}
+                        Uploaded: {{ meme.upload_date[:10] }}
                     </small>
                 </div>
             </div>
