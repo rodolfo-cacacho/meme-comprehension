@@ -29,7 +29,7 @@
             <div class="card-body">
                 <h5 class="card-title">What is MemeQA?</h5>
                 <p class="card-text">
-                    MemeQA is a crowd-sourced meme understanding dataset designed to evaluate Vision-Language Models (VLMs) 
+                    MemeQA is a crowd-sourced meme understanding dataset designed to evaluate Vision-Language Models (VLLMs) 
                     in their comprehension of internet memes and human humor. This benchmark tests AI systems' ability to 
                     understand cultural references, visual-textual context, and the nuanced layers of meaning that make memes 
                     effective communication tools in digital culture.
@@ -137,6 +137,7 @@
                     </div>
                 </div>
             </div>
+            {% if development %}
             <div class="col-md-4 mb-3">
                 <div class="card h-100">
                     <div class="card-body">
@@ -146,6 +147,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 </div>

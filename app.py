@@ -10,11 +10,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Environment detection
+DEVELOPMENT = os.environ.get('ENV') == 'development' or app.debug
+# print({os.environ.get('ENV')})
+print(f"Running in {'development' if DEVELOPMENT else 'production'} mode")
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -132,7 +136,8 @@ def index():
     return render_template('index.html', 
                          evaluation_count=evaluation_count, 
                          available_memes=available_memes,
-                         can_upload=can_upload)
+                         can_upload=can_upload,
+                         development=DEVELOPMENT)
 
 @app.route('/gallery')
 def gallery():
@@ -246,8 +251,7 @@ def upload_file():
         if file and allowed_file(file.filename):
             # Generate unique filename
             original_filename = secure_filename(file.filename)
-            ext = os.path.splitext(original_filename)[1]
-            unique_filename = str(uuid.uuid4()) + ext
+            unique_filename = str(uuid.uuid4()) + '_' + original_filename
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
             
             # Save file
@@ -298,6 +302,10 @@ def stats():
 @app.route('/reset_session')
 def reset_session():
     """Reset current session (for testing)"""
+    if not DEVELOPMENT:
+        flash('This feature is only available in development mode.')
+        return redirect(url_for('index'))
+    
     session.clear()
     flash('Session reset! You can now start fresh.')
     return redirect(url_for('index'))
