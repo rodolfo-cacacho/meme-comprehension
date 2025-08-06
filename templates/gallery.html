@@ -1,54 +1,114 @@
+<!-- templates/gallery.html -->
 {% extends "base.html" %}
-
 {% block title %}Gallery - Meme Benchmark{% endblock %}
-
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Meme Gallery</h1>
     <a href="{{ url_for('index') }}" class="btn btn-primary">Back to Home</a>
 </div>
 
-{% if memes %}
-    <div class="row">
-        {% for meme in memes %}
-        <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card h-100 shadow-sm">
-                <img src="{{ url_for('uploaded_file', filename=meme.filename) }}" 
-                     class="card-img-top gallery-img" 
-                     alt="{{ meme.original_filename }}">
-                <div class="card-body">
-                    <div class="accordion" id="accordion{{ meme.id }}">
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" 
-                                        data-bs-toggle="collapse" data-bs-target="#collapse{{ meme.id }}">
-                                    View Descriptions
-                                </button>
-                            </h2>
-                            <div id="collapse{{ meme.id }}" class="accordion-collapse collapse">
-                                <div class="accordion-body">
-                                    <div class="mb-2"><strong>1:</strong> {{ meme.description_1 }}</div>
-                                    <div class="mb-2"><strong>2:</strong> {{ meme.description_2 }}</div>
-                                    <div class="mb-2"><strong>3:</strong> {{ meme.description_3 }}</div>
-                                    <div class="mb-2"><strong>4:</strong> {{ meme.description_4 }}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <small class="text-muted d-block mt-2">
-                        Uploaded: {{ meme.upload_date[:10] }}
-                    </small>
-                </div>
+{% if memes.items %}
+    <!-- Per Page Selector -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <label class="me-2">Memes per page:</label>
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('gallery', page=1, per_page=4) }}" 
+                   class="btn btn-sm {% if per_page == 4 %}btn-primary{% else %}btn-outline-primary{% endif %}">4</a>
+                <a href="{{ url_for('gallery', page=1, per_page=8) }}" 
+                   class="btn btn-sm {% if per_page == 8 %}btn-primary{% else %}btn-outline-primary{% endif %}">8</a>
+                <a href="{{ url_for('gallery', page=1, per_page=16) }}" 
+                   class="btn btn-sm {% if per_page == 16 %}btn-primary{% else %}btn-outline-primary{% endif %}">16</a>
             </div>
         </div>
+        <div class="text-muted">
+            Total memes: {{ memes.total }}
+        </div>
+    </div>
+
+    <!-- Memes Grid -->
+    <div class="row">
+        {% set col_size = 6 if per_page == 4 else 3 %}
+        {% for meme in memes.items %}
+            <div class="col-md-6 col-lg-{{ col_size }} mb-4">
+                {% include '_meme.html' %}
+            </div>
         {% endfor %}
     </div>
+
+    <!-- Pagination -->
+    {% if memes.pages > 1 %}
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            <!-- Previous button -->
+            <li class="page-item {% if not memes.has_prev %}disabled{% endif %}">
+                <a class="page-link" 
+                   href="{% if memes.has_prev %}{{ url_for('gallery', page=memes.prev_num, per_page=per_page) }}{% else %}#{% endif %}"
+                   aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+
+            <!-- Page numbers -->
+            {% for page_num in memes.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                {% if page_num %}
+                    {% if page_num != memes.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('gallery', page=page_num, per_page=per_page) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            <!-- Next button -->
+            <li class="page-item {% if not memes.has_next %}disabled{% endif %}">
+                <a class="page-link" 
+                   href="{% if memes.has_next %}{{ url_for('gallery', page=memes.next_num, per_page=per_page) }}{% else %}#{% endif %}"
+                   aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+
+    <!-- Page info -->
+    {% if memes.total > 0 %}
+    <p class="text-center text-muted">
+        Showing {{ memes.first }} - {{ memes.last }} of {{ memes.total }} memes
+    </p>
+    {% endif %}
+
 {% else %}
-    <div class="text-center">
+    <div class="text-center py-5">
         <h3>No memes uploaded yet</h3>
         <p>Be the first to contribute after completing your evaluations!</p>
         <a href="{{ url_for('index') }}" class="btn btn-primary">Get Started</a>
     </div>
 {% endif %}
+
+<style>
+.gallery-img {
+    transition: transform 0.2s;
+}
+.gallery-img:hover {
+    transform: scale(1.02);
+}
+.card {
+    transition: box-shadow 0.2s;
+}
+.card:hover {
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+}
+</style>
 {% endblock %}

@@ -1,3 +1,4 @@
 .env
-.ipynb
+*.ipynb
 __pycache__/
+memes/

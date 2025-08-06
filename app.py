@@ -126,6 +126,64 @@ def get_random_meme_for_evaluation():
     conn.close()
     return meme
 
+# Pagination helper class
+class Pagination:
+    def __init__(self, page, per_page, total_count):
+        self.page = page
+        self.per_page = per_page
+        self.total_count = total_count
+    
+    @property
+    def items(self):
+        return self._items
+    
+    @items.setter
+    def items(self, value):
+        self._items = value
+    
+    @property
+    def prev_num(self):
+        return self.page - 1 if self.has_prev else None
+    
+    @property
+    def next_num(self):
+        return self.page + 1 if self.has_next else None
+    
+    @property
+    def has_prev(self):
+        return self.page > 1
+    
+    @property
+    def has_next(self):
+        return self.page < self.pages
+    
+    @property
+    def pages(self):
+        return int((self.total_count - 1) / self.per_page) + 1 if self.total_count > 0 else 1
+    
+    @property
+    def total(self):
+        return self.total_count
+    
+    @property
+    def first(self):
+        return ((self.page - 1) * self.per_page) + 1 if self.total_count > 0 else 0
+    
+    @property
+    def last(self):
+        return min(self.first + self.per_page - 1, self.total_count)
+    
+    def iter_pages(self, left_edge=2, left_current=2, right_current=3, right_edge=2):
+        last = 0
+        for num in range(1, self.pages + 1):
+            if num <= left_edge or \
+               (self.page - left_current - 1 < num < self.page + right_current) or \
+               num > self.pages - right_edge:
+                if last + 1 != num:
+                    yield None
+                yield num
+                last = num
+
 @app.route('/')
 def index():
     """Landing page with intro and evaluation count"""
@@ -141,13 +199,36 @@ def index():
 
 @app.route('/gallery')
 def gallery():
-    """Display all uploaded memes"""
+    """Display uploaded memes with enhanced pagination"""
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 4, type=int)
+    
+    # Limit per_page options for security - changed to 4, 8, 16
+    if per_page not in [4, 8, 16]:
+        per_page = 4
+    
+    offset = (page - 1) * per_page
+    
     conn = get_db_connection()
+    
+    # Get total count for pagination
+    total_count = conn.execute('SELECT COUNT(*) as count FROM memes').fetchone()['count']
+    
+    # Get memes for current page
     memes = conn.execute(
-        'SELECT * FROM memes ORDER BY upload_date DESC'
+        'SELECT * FROM memes ORDER BY upload_date DESC LIMIT ? OFFSET ?',
+        (per_page, offset)
     ).fetchall()
+    
     conn.close()
-    return render_template('gallery.html', memes=memes)
+    
+    # Create pagination object
+    pagination = Pagination(page, per_page, total_count)
+    pagination.items = memes
+    
+    return render_template('gallery.html', 
+                         memes=pagination,
+                         per_page=per_page)
 
 @app.route('/evaluate')
 def evaluate():

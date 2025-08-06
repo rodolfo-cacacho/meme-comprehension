@@ -1,0 +1,30 @@
+<!-- templates/_meme.html -->
+<div class="card h-100 shadow-sm">
+    <img src="{{ url_for('uploaded_file', filename=meme.filename) }}"
+         class="card-img-top gallery-img"
+         alt="{{ meme.original_filename }}"
+         style="height: 250px; object-fit: cover;">
+    <div class="card-body">
+        <div class="accordion" id="accordion{{ meme.id }}">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapse{{ meme.id }}">
+                        View Descriptions
+                    </button>
+                </h2>
+                <div id="collapse{{ meme.id }}" class="accordion-collapse collapse">
+                    <div class="accordion-body">
+                        <div class="mb-2"><strong>1:</strong> {{ meme.description_1 }}</div>
+                        <div class="mb-2"><strong>2:</strong> {{ meme.description_2 }}</div>
+                        <div class="mb-2"><strong>3:</strong> {{ meme.description_3 }}</div>
+                        <div class="mb-2"><strong>4:</strong> {{ meme.description_4 }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <small class="text-muted d-block mt-2">
+            Uploaded: {{ meme.upload_date[:10] if meme.upload_date else 'Unknown' }}
+        </small>
+    </div>
+</div>
