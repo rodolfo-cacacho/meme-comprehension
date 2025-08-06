@@ -1,0 +1,29 @@
+<!-- templates/404.html -->
+{% extends "base.html" %}
+
+{% block title %}Page Not Found - Meme Benchmark{% endblock %}
+
+{% block content %}
+<div class="container text-center py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h1 class="display-1">404</h1>
+            <h2 class="mb-4">Oops! Page Not Found</h2>
+            <p class="lead mb-4">
+                The page you're looking for doesn't exist. It might have been moved, deleted, or you may have typed the URL incorrectly.
+            </p>
+            <div class="d-grid gap-2 d-sm-block">
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    <i class="bi bi-house-door"></i> Go Home
+                </a>
+                <a href="{{ url_for('gallery') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-images"></i> View Gallery
+                </a>
+                <button onclick="history.back()" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Go Back
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

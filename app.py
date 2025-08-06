@@ -2,7 +2,7 @@ import os
 import sqlite3
 import random
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, session
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, session, abort
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash
 import uuid
@@ -207,12 +207,21 @@ def gallery():
     if per_page not in [4, 8, 16]:
         per_page = 4
     
+    # Validate page number is positive
+    if page < 1:
+        abort(404)
+    
     offset = (page - 1) * per_page
     
     conn = get_db_connection()
     
     # Get total count for pagination
     total_count = conn.execute('SELECT COUNT(*) as count FROM memes').fetchone()['count']
+    
+    # Check if page is out of range
+    max_page = (total_count + per_page - 1) // per_page if total_count > 0 else 1
+    if page > max_page and total_count > 0:
+        abort(404)
     
     # Get memes for current page
     memes = conn.execute(
@@ -391,6 +400,68 @@ def reset_session():
     flash('Session reset! You can now start fresh.')
     return redirect(url_for('index'))
 
+@app.route('/test-error/<int:error_code>')
+def test_error(error_code):
+    """Test route to deliberately trigger errors (development only)"""
+    if not DEVELOPMENT:
+        abort(404)
+    
+    if error_code == 404:
+        abort(404)
+    elif error_code == 403:
+        abort(403)
+    elif error_code == 413:
+        abort(413)
+    elif error_code == 500:
+        # This will cause a real error
+        1 / 0
+    else:
+        return f"Unknown error code: {error_code}"
+
+# Error handlers
+@app.errorhandler(404)
+def not_found_error(error):
+    """Handle 404 errors - Page not found"""
+    print(f"404 ERROR HANDLER CALLED: {error}")  # Debug print
+    app.logger.error(f'404 error: {error}')
+    
+    # Try the simple template first to debug
+    try:
+        return render_template('404.html'), 404
+    except Exception as e:
+        print(f"Template rendering error: {e}")
+        # Fallback to a basic HTML response
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head><title>404 Not Found</title></head>
+        <body>
+            <h1>404 - Page Not Found</h1>
+            <p>The page you requested could not be found.</p>
+            <a href="/">Go Home</a>
+        </body>
+        </html>
+        """, 404
+    
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors - Internal server error"""
+    app.logger.error(f'500 error: {error}')  # Add logging
+    # No rollback needed for sqlite3 connection
+    return render_template('500.html'), 500
+
+@app.errorhandler(403)
+def forbidden_error(error):
+    """Handle 403 errors - Forbidden access"""
+    app.logger.error(f'403 error: {error}')  # Add logging
+    return render_template('403.html'), 403
+
+@app.errorhandler(413)
+def too_large_error(error):
+    """Handle 413 errors - File too large"""
+    app.logger.error(f'413 error: {error}')  # Add logging
+    return render_template('413.html'), 413
+
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True)
+    app.run()
