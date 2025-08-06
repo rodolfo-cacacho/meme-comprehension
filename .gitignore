@@ -2,3 +2,4 @@
 *.ipynb
 __pycache__/
 memes/
+.DS_Store
