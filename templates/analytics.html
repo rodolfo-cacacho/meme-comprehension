@@ -1,4 +1,4 @@
-<!-- templates/analytics.html -->
+<!-- templates/analytics.html - Safe version with None handling -->
 {% extends "base.html" %}
 
 {% block title %}Research Analytics - MemeQA{% endblock %}
@@ -7,9 +7,11 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>📊 Research Analytics Dashboard</h1>
     <div>
+        {% if development %}
         <a href="{{ url_for('export_data') }}" class="btn btn-outline-primary me-2">
             📥 Export Data
         </a>
+        {% endif %}
         <a href="{{ url_for('index') }}" class="btn btn-primary">Back to Home</a>
     </div>
 </div>
@@ -19,7 +21,7 @@
     <div class="col-md-3 mb-3">
         <div class="card text-center shadow-sm h-100">
             <div class="card-body">
-                <h2 class="card-title text-primary">{{ total_memes }}</h2>
+                <h2 class="card-title text-primary">{{ total_memes or 0 }}</h2>
                 <p class="card-text">Total Memes</p>
                 <small class="text-muted">Classified</small>
             </div>
@@ -29,7 +31,7 @@
     <div class="col-md-3 mb-3">
         <div class="card text-center shadow-sm h-100">
             <div class="card-body">
-                <h2 class="card-title text-success">{{ total_evaluations }}</h2>
+                <h2 class="card-title text-success">{{ total_evaluations or 0 }}</h2>
                 <p class="card-text">Total Evaluations</p>
                 <small class="text-muted">Completed</small>
             </div>
@@ -39,7 +41,7 @@
     <div class="col-md-3 mb-3">
         <div class="card text-center shadow-sm h-100">
             <div class="card-body">
-                <h2 class="card-title text-info">{{ unique_evaluators }}</h2>
+                <h2 class="card-title text-info">{{ unique_evaluators or 0 }}</h2>
                 <p class="card-text">Anonymous Contributors</p>
                 <small class="text-muted">Unique sessions</small>
             </div>
@@ -49,7 +51,7 @@
     <div class="col-md-3 mb-3">
         <div class="card text-center shadow-sm h-100">
             <div class="card-body">
-                <h2 class="card-title text-warning">{{ registered_contributors }}</h2>
+                <h2 class="card-title text-warning">{{ registered_contributors or 0 }}</h2>
                 <p class="card-text">Registered Contributors</p>
                 <small class="text-muted">With email</small>
             </div>
@@ -68,26 +70,32 @@
                 {% if accuracy_stats and accuracy_stats.total_evaluations > 0 %}
                 <div class="row">
                     <div class="col-md-4 text-center">
-                        <h3 class="text-success">{{ "%.1f"|format(accuracy_stats.overall_accuracy * 100) }}%</h3>
+                        {% set accuracy_percent = (accuracy_stats.overall_accuracy * 100) if accuracy_stats.overall_accuracy else 0 %}
+                        <h3 class="text-success">{{ "%.1f"|format(accuracy_percent) }}%</h3>
                         <p class="mb-0">Overall Accuracy</p>
                     </div>
                     <div class="col-md-4 text-center">
-                        <h3 class="text-primary">{{ accuracy_stats.correct_evaluations }}</h3>
+                        <h3 class="text-primary">{{ accuracy_stats.correct_evaluations or 0 }}</h3>
                         <p class="mb-0">Correct Identifications</p>
                     </div>
                     <div class="col-md-4 text-center">
-                        <h3 class="text-info">{{ accuracy_stats.total_evaluations }}</h3>
+                        <h3 class="text-info">{{ accuracy_stats.total_evaluations or 0 }}</h3>
                         <p class="mb-0">Total Evaluations</p>
                     </div>
                 </div>
                 <div class="progress mt-3" style="height: 20px;">
+                    {% set progress_width = accuracy_percent if accuracy_percent else 0 %}
                     <div class="progress-bar bg-success" role="progressbar" 
-                         style="width: {{ accuracy_stats.overall_accuracy * 100 }}%">
-                        {{ "%.1f"|format(accuracy_stats.overall_accuracy * 100) }}% Correct
+                         style="width: {{ progress_width }}%">
+                        {{ "%.1f"|format(progress_width) }}% Correct
                     </div>
                 </div>
                 {% else %}
-                <p class="text-muted">No evaluation data available yet.</p>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>No evaluation data available yet.</strong> 
+                    Once users start evaluating memes, accuracy statistics will appear here.
+                </div>
                 {% endif %}
             </div>
         </div>
@@ -105,16 +113,22 @@
                 {% if country_stats %}
                     {% for country in country_stats %}
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span>{{ country.country_of_submission }}</span>
-                        <span class="badge bg-primary">{{ country.count }}</span>
+                        <span>{{ country.country_of_submission or 'Unknown' }}</span>
+                        <span class="badge bg-primary">{{ country.count or 0 }}</span>
                     </div>
                     <div class="progress mb-3" style="height: 8px;">
+                        {% set max_count = country_stats[0].count if country_stats[0].count else 1 %}
+                        {% set width_percent = (country.count / max_count * 100) if country.count else 0 %}
                         <div class="progress-bar" role="progressbar" 
-                             style="width: {{ (country.count / country_stats[0].count * 100)|round(1) }}%"></div>
+                             style="width: {{ width_percent }}%"></div>
                     </div>
                     {% endfor %}
                 {% else %}
-                    <p class="text-muted">No country data available.</p>
+                    <div class="alert alert-light">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>No country data available yet.</strong><br>
+                        Country information will appear as users upload memes with location data.
+                    </div>
                 {% endif %}
             </div>
         </div>
@@ -129,16 +143,22 @@
                 {% if platform_stats %}
                     {% for platform in platform_stats %}
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span>{{ platform.platform_found }}</span>
-                        <span class="badge bg-info">{{ platform.count }}</span>
+                        <span>{{ platform.platform_found or 'Unknown' }}</span>
+                        <span class="badge bg-info">{{ platform.count or 0 }}</span>
                     </div>
                     <div class="progress mb-3" style="height: 8px;">
+                        {% set max_count = platform_stats[0].count if platform_stats[0].count else 1 %}
+                        {% set width_percent = (platform.count / max_count * 100) if platform.count else 0 %}
                         <div class="progress-bar bg-info" role="progressbar" 
-                             style="width: {{ (platform.count / platform_stats[0].count * 100)|round(1) }}%"></div>
+                             style="width: {{ width_percent }}%"></div>
                     </div>
                     {% endfor %}
                 {% else %}
-                    <p class="text-muted">No platform data available.</p>
+                    <div class="alert alert-light">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>No platform data available yet.</strong><br>
+                        Platform information will appear as users upload memes with source data.
+                    </div>
                 {% endif %}
             </div>
         </div>
@@ -156,16 +176,22 @@
                 {% if humor_stats %}
                     {% for humor in humor_stats %}
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span>{{ humor.humor_type }}</span>
-                        <span class="badge bg-warning text-dark">{{ humor.count }}</span>
+                        <span>{{ humor.humor_type or 'Unknown' }}</span>
+                        <span class="badge bg-warning text-dark">{{ humor.count or 0 }}</span>
                     </div>
                     <div class="progress mb-3" style="height: 8px;">
+                        {% set max_count = humor_stats[0].count if humor_stats[0].count else 1 %}
+                        {% set width_percent = (humor.count / max_count * 100) if humor.count else 0 %}
                         <div class="progress-bar bg-warning" role="progressbar" 
-                             style="width: {{ (humor.count / humor_stats[0].count * 100)|round(1) }}%"></div>
+                             style="width: {{ width_percent }}%"></div>
                     </div>
                     {% endfor %}
                 {% else %}
-                    <p class="text-muted">No humor data available.</p>
+                    <div class="alert alert-light">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>No humor data available yet.</strong><br>
+                        Humor classifications will appear as users upload enhanced meme data.
+                    </div>
                 {% endif %}
             </div>
         </div>
@@ -180,16 +206,22 @@
                 {% if cultural_stats %}
                     {% for cultural in cultural_stats %}
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span>{{ cultural.cultural_reach }}</span>
-                        <span class="badge bg-secondary">{{ cultural.count }}</span>
+                        <span>{{ cultural.cultural_reach or 'Unknown' }}</span>
+                        <span class="badge bg-secondary">{{ cultural.count or 0 }}</span>
                     </div>
                     <div class="progress mb-3" style="height: 8px;">
+                        {% set max_count = cultural_stats[0].count if cultural_stats[0].count else 1 %}
+                        {% set width_percent = (cultural.count / max_count * 100) if cultural.count else 0 %}
                         <div class="progress-bar bg-secondary" role="progressbar" 
-                             style="width: {{ (cultural.count / cultural_stats[0].count * 100)|round(1) }}%"></div>
+                             style="width: {{ width_percent }}%"></div>
                     </div>
                     {% endfor %}
                 {% else %}
-                    <p class="text-muted">No cultural reach data available.</p>
+                    <div class="alert alert-light">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>No cultural reach data available yet.</strong><br>
+                        Cultural classifications will appear as users upload enhanced meme data.
+                    </div>
                 {% endif %}
             </div>
         </div>
@@ -220,19 +252,27 @@
                                 <tr>
                                     <td>{{ meme.id }}</td>
                                     <td>
-                                        <small>{{ meme.meme_content[:50] }}{% if meme.meme_content|length > 50 %}...{% endif %}</small>
+                                        <small>
+                                            {{ (meme.meme_content or 'Legacy meme')[:50] }}
+                                            {% if (meme.meme_content or 'Legacy meme')|length > 50 %}...{% endif %}
+                                        </small>
                                     </td>
                                     <td>
-                                        <span class="badge bg-danger">{{ "%.1f"|format(meme.accuracy_rate * 100) }}%</span>
+                                        {% set acc_rate = (meme.accuracy_rate * 100) if meme.accuracy_rate else 0 %}
+                                        <span class="badge bg-danger">{{ "%.1f"|format(acc_rate) }}%</span>
                                     </td>
-                                    <td>{{ meme.total_evaluations }}</td>
+                                    <td>{{ meme.total_evaluations or 0 }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                 {% else %}
-                    <p class="text-muted">Not enough evaluation data available.</p>
+                    <div class="alert alert-light">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Not enough evaluation data available.</strong><br>
+                        Difficulty analysis will appear when memes have 5+ evaluations.
+                    </div>
                 {% endif %}
             </div>
         </div>
@@ -260,19 +300,27 @@
                                 <tr>
                                     <td>{{ meme.id }}</td>
                                     <td>
-                                        <small>{{ meme.meme_content[:50] }}{% if meme.meme_content|length > 50 %}...{% endif %}</small>
+                                        <small>
+                                            {{ (meme.meme_content or 'Legacy meme')[:50] }}
+                                            {% if (meme.meme_content or 'Legacy meme')|length > 50 %}...{% endif %}
+                                        </small>
                                     </td>
                                     <td>
-                                        <span class="badge bg-success">{{ "%.1f"|format(meme.accuracy_rate * 100) }}%</span>
+                                        {% set acc_rate = (meme.accuracy_rate * 100) if meme.accuracy_rate else 0 %}
+                                        <span class="badge bg-success">{{ "%.1f"|format(acc_rate) }}%</span>
                                     </td>
-                                    <td>{{ meme.total_evaluations }}</td>
+                                    <td>{{ meme.total_evaluations or 0 }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                 {% else %}
-                    <p class="text-muted">Not enough evaluation data available.</p>
+                    <div class="alert alert-light">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Not enough evaluation data available.</strong><br>
+                        Easy meme analysis will appear when memes have 5+ evaluations.
+                    </div>
                 {% endif %}
             </div>
         </div>
@@ -289,9 +337,15 @@
             <div class="col-md-6">
                 <h5>Dataset Quality Metrics</h5>
                 <ul class="list-unstyled">
-                    <li><strong>Coverage:</strong> {{ total_memes }} unique memes classified</li>
-                    <li><strong>Validation:</strong> {{ total_evaluations }} human evaluations</li>
-                    <li><strong>Reliability:</strong> {{ "%.1f"|format(accuracy_stats.overall_accuracy * 100) if accuracy_stats else "N/A" }}% inter-annotator agreement</li>
+                    <li><strong>Coverage:</strong> {{ total_memes or 0 }} unique memes classified</li>
+                    <li><strong>Validation:</strong> {{ total_evaluations or 0 }} human evaluations</li>
+                    <li><strong>Reliability:</strong> 
+                        {% if accuracy_stats and accuracy_stats.overall_accuracy %}
+                            {{ "%.1f"|format(accuracy_stats.overall_accuracy * 100) }}% inter-annotator agreement
+                        {% else %}
+                            N/A (insufficient data)
+                        {% endif %}
+                    </li>
                     <li><strong>Diversity:</strong> {{ country_stats|length if country_stats else 0 }} countries represented</li>
                 </ul>
             </div>
@@ -319,18 +373,25 @@
                         {% else %}
                             <strong>Low Agreement:</strong> {{ "%.1f"|format(accuracy) }}% accuracy suggests high subjectivity or need for description quality improvement.
                         {% endif %}
+                        <br><br>
                     {% endif %}
                     
                     {% if humor_stats %}
                         {% set top_humor = humor_stats[0] %}
                         The most common humor type is <strong>{{ top_humor.humor_type }}</strong> ({{ top_humor.count }} memes), 
                         indicating this dataset captures {{ top_humor.humor_type.lower() }} patterns effectively.
+                        <br><br>
                     {% endif %}
                     
                     {% if cultural_stats %}
                         {% set top_cultural = cultural_stats[0] %}
                         Most memes have <strong>{{ top_cultural.cultural_reach.lower() }}</strong> cultural reach ({{ top_cultural.count }} memes),
                         suggesting the dataset is well-suited for studying {{ top_cultural.cultural_reach.lower() }} meme phenomena.
+                        <br><br>
+                    {% endif %}
+                    
+                    {% if not (accuracy_stats and accuracy_stats.total_evaluations > 0) %}
+                        <strong>Early Stage:</strong> The dataset is in its initial phase. Key insights will emerge as more memes are evaluated and classified.
                     {% endif %}
                 </div>
             </div>
@@ -339,6 +400,7 @@
 </div>
 
 <!-- Data Export Information -->
+{% if development %}
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-light">
         <h4 class="mb-0">💾 Data Export & Usage</h4>
@@ -390,6 +452,7 @@
         </div>
     </div>
 </div>
+{% endif %}
 
 <!-- Research Team Information -->
 <div class="card shadow-sm">
@@ -415,9 +478,9 @@
                 <h5>Dataset Statistics Summary</h5>
                 <div class="table-responsive">
                     <table class="table table-sm">
-                        <tr><td>Total Memes:</td><td><strong>{{ total_memes }}</strong></td></tr>
-                        <tr><td>Total Evaluations:</td><td><strong>{{ total_evaluations }}</strong></td></tr>
-                        <tr><td>Contributors:</td><td><strong>{{ unique_evaluators + registered_contributors }}</strong></td></tr>
+                        <tr><td>Total Memes:</td><td><strong>{{ total_memes or 0 }}</strong></td></tr>
+                        <tr><td>Total Evaluations:</td><td><strong>{{ total_evaluations or 0 }}</strong></td></tr>
+                        <tr><td>Contributors:</td><td><strong>{{ (unique_evaluators or 0) + (registered_contributors or 0) }}</strong></td></tr>
                         <tr><td>Countries:</td><td><strong>{{ country_stats|length if country_stats else 0 }}</strong></td></tr>
                         <tr><td>Platforms:</td><td><strong>{{ platform_stats|length if platform_stats else 0 }}</strong></td></tr>
                         <tr><td>Humor Types:</td><td><strong>{{ humor_stats|length if humor_stats else 0 }}</strong></td></tr>
@@ -455,6 +518,12 @@
     background-color: #e7f3ff;
     border-color: #b8daff;
     color: #0c5460;
+}
+
+.alert-light {
+    background-color: #fefefe;
+    border-color: #e9ecef;
+    color: #6c757d;
 }
 </style>
 {% endblock %}

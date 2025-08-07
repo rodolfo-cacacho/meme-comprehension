@@ -1,13 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Home - Meme Benchmark{% endblock %}
+{% block title %}Home - MemeQA Enhanced{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-10 col-lg-8">
         <div class="text-center mb-5">
-            <h1 class="display-4 mb-4">LLMs last test: Memes 😂</h1>
+            <h1 class="display-4 mb-4">🎭 LLMs Last Test: Memes 😂</h1>
+            {% if current_user %}
+                <p class="lead">Welcome back, <strong>{{ current_user.name.split()[0] }}</strong>! Ready to advance meme AI research?</p>
+            {% else %}
+                <p class="lead">Help us create the ultimate meme understanding dataset for AI research!</p>
+            {% endif %}
         </div>
+        
+        <!-- Hero meme image -->
         <div class="card shadow-sm mb-4">
             <div class="card-body text-center">
                 <h5 class="lead">Help us create the ultimate meme understanding dataset!</h5>
@@ -17,28 +24,47 @@
             </div>
         </div>
 
+        <!-- How it works section -->
         <div class="card shadow-sm mb-4">
             <div class="card-body">
-                <h3 class="card-title">How it works:</h3>
-                <ol class="card-text">
-                    <li><strong>Evaluate 10 memes:</strong> Look at memes and choose the best description from 4 options</li>
-                    <li><strong>Upload your own:</strong> After evaluating 10 memes, upload your own meme with 4 different descriptions</li>
-                    <li><strong>Help the research:</strong> Your contributions help build better AI understanding of humor and culture</li>
-                </ol>
+                <h3 class="card-title">🚀 How it works:</h3>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="text-center">
+                            <div class="display-1 mb-2">1️⃣</div>
+                            <h5>Evaluate Memes</h5>
+                            <p class="small text-muted">Look at memes and choose the best description from 4 options. Help us understand what makes memes tick!</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="text-center">
+                            <div class="display-1 mb-2">2️⃣</div>
+                            <h5>Upload & Classify</h5>
+                            <p class="small text-muted">After 10 evaluations, upload your own memes with detailed cultural and humor classifications.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="text-center">
+                            <div class="display-1 mb-2">3️⃣</div>
+                            <h5>Advance Research</h5>
+                            <p class="small text-muted">Your contributions help build better AI understanding of humor, culture, and internet phenomena.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
+
         <!-- Research Information Box -->
         <div class="card shadow-sm mb-4 border-primary">
             <div class="card-header bg-primary text-white">
                 <h4 class="mb-0">📚 About This Research</h4>
             </div>
             <div class="card-body">
-                <h5 class="card-title">What is MemeQA?</h5>
+                <h5 class="card-title">What is MemeQA Enhanced?</h5>
                 <p class="card-text">
-                    MemeQA is a crowd-sourced meme understanding dataset designed to evaluate Vision-Language Models (VLMs) 
-                    in their comprehension of internet memes and human humor. This benchmark tests AI systems' ability to 
-                    understand cultural references, visual-textual context, and the nuanced layers of meaning that make memes 
-                    effective communication tools in digital culture.
+                    MemeQA is a comprehensive crowd-sourced meme understanding dataset designed to evaluate Vision-Language Models (VLMs) 
+                    in their comprehension of internet memes and human humor. This enhanced version includes detailed cultural classifications,
+                    humor analysis, emotional mappings, and temporal context to create the most comprehensive meme research dataset available.
                 </p>
                 
                 <p class="card-text">
@@ -55,15 +81,17 @@
                             <li>Benchmark humor understanding in AI</li>
                             <li>Create diverse cultural context dataset</li>
                             <li>Enable explainable meme analysis</li>
+                            <li>Study cross-cultural humor patterns</li>
                         </ul>
                     </div>
                     <div class="col-md-6">
-                        <h6><strong>Applications:</strong></h6>
+                        <h6><strong>Enhanced Features:</strong></h6>
                         <ul class="mb-0">
-                            <li>Social media content moderation</li>
-                            <li>Cultural trend analysis</li>
-                            <li>Humor-aware AI assistants</li>
-                            <li>Digital literacy tools</li>
+                            <li>15+ classification dimensions per meme</li>
+                            <li>Emotional and humor type analysis</li>
+                            <li>Cultural reach & platform tracking</li>
+                            <li>Temporal meme evolution data</li>
+                            <li>User performance analytics</li>
                         </ul>
                     </div>
                 </div>
@@ -79,82 +107,251 @@
         <!-- Progress Section -->
         <div class="card shadow-sm mb-4">
             <div class="card-body">
-                <h4 class="card-title">Your Progress</h4>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="card-title mb-0">📊 Your Progress</h4>
+                    {% if current_user %}
+                        <div class="text-end">
+                            <small class="text-muted">Registered User</small>
+                            <div class="user-avatar bg-success text-white ms-2" style="width: 24px; height: 24px; font-size: 12px;">
+                                {{ current_user.name[:1].upper() }}
+                            </div>
+                        </div>
+                    {% else %}
+                        <a href="{{ url_for('register') }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-person-plus"></i> Join Research
+                        </a>
+                    {% endif %}
+                </div>
                 
                 {% if available_memes < 10 %}
                     <div class="alert alert-info">
                         <h5>🚀 Bootstrap Phase</h5>
                         <p class="mb-2">Only {{ available_memes }} memes available for evaluation. You can upload without completing 10 evaluations to help build the initial dataset!</p>
-                        <a href="{{ url_for('upload_file') }}" class="btn btn-primary">Upload Meme</a>
+                        <a href="{{ url_for('upload_file') }}" class="btn btn-primary">
+                            <i class="bi bi-upload"></i> Upload Meme
+                        </a>
                     </div>
                 {% endif %}
                 
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span>Evaluations completed:</span>
-                        <span class="badge bg-primary">{{ evaluation_count }}/10</span>
-                    </div>
-                    <div class="progress progress-bar-custom">
-                        <div class="progress-bar" role="progressbar" 
-                             style="width: {{ (evaluation_count/10*100)|round }}%"
-                             aria-valuenow="{{ evaluation_count }}" 
-                             aria-valuemin="0" aria-valuemax="10">
-                            {{ evaluation_count }}/10
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span><strong>Evaluations completed:</strong></span>
+                                <span class="badge bg-primary fs-6">{{ evaluation_count }}/10</span>
+                            </div>
+                            <div class="progress progress-bar-custom">
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: {{ (evaluation_count/10*100)|round }}%"
+                                     aria-valuenow="{{ evaluation_count }}" 
+                                     aria-valuemin="0" aria-valuemax="10">
+                                    {{ evaluation_count }}/10
+                                </div>
+                            </div>
                         </div>
+                        
+                        {% if current_user %}
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="border rounded p-2">
+                                        <div class="h4 text-primary mb-1">{{ current_user.total_submissions or 0 }}</div>
+                                        <small class="text-muted">Memes Uploaded</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="border rounded p-2">
+                                        <div class="h4 text-success mb-1">{{ current_user.total_evaluations or 0 }}</div>
+                                        <small class="text-muted">Total Evaluations</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="border rounded p-2">
+                                        <div class="h4 text-info mb-1">
+                                            {% if current_user.evaluation_accuracy %}
+                                                {{ "%.0f"|format(current_user.evaluation_accuracy * 100) }}%
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </div>
+                                        <small class="text-muted">Accuracy</small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        {% if can_upload and evaluation_count >= 10 %}
+                            <div class="alert alert-success mb-0">
+                                <h6>🎉 Ready to Upload!</h6>
+                                <p class="small mb-2">You've completed all required evaluations.</p>
+                                <a href="{{ url_for('upload_file') }}" class="btn btn-success btn-sm w-100">
+                                    <i class="bi bi-upload"></i> Upload Meme
+                                </a>
+                            </div>
+                        {% elif not can_upload %}
+                            <div class="alert alert-warning mb-0">
+                                <h6>📝 Keep Going!</h6>
+                                <p class="small mb-2">Complete {{ 10 - evaluation_count }} more evaluation{{ 's' if (10 - evaluation_count) != 1 else '' }} to unlock uploads.</p>
+                                <a href="{{ url_for('evaluate') }}" class="btn btn-warning btn-sm w-100">
+                                    {% if evaluation_count == 0 %}
+                                        <i class="bi bi-play"></i> Start Evaluating
+                                    {% else %}
+                                        <i class="bi bi-arrow-right"></i> Continue
+                                    {% endif %}
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-primary mb-0">
+                                <h6>🚀 Bootstrap Mode</h6>
+                                <p class="small mb-2">Help us get started by uploading memes!</p>
+                                <a href="{{ url_for('upload_file') }}" class="btn btn-primary btn-sm w-100">
+                                    <i class="bi bi-upload"></i> Upload Meme
+                                </a>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
-                
-                {% if can_upload and evaluation_count >= 10 %}
-                    <div class="alert alert-success">
-                        <h5>🎉 Great job!</h5>
-                        <p class="mb-2">You've completed all required evaluations. You can now upload your own meme!</p>
-                        <a href="{{ url_for('upload_file') }}" class="btn btn-success">Upload Meme</a>
-                    </div>
-                {% elif not can_upload %}
-                    <p class="text-muted mb-3">Complete {{ 10 - evaluation_count }} more evaluation{{ 's' if (10 - evaluation_count) != 1 else '' }} to unlock meme upload.</p>
-                    <a href="{{ url_for('evaluate') }}" class="btn btn-primary">
-                        {% if evaluation_count == 0 %}
-                            Start Evaluating
-                        {% else %}
-                            Continue Evaluating
-                        {% endif %}
-                    </a>
-                {% endif %}
             </div>
         </div>
 
         <!-- Quick Actions -->
-        <div class="row text-center">
-            <div class="{% if development %}col-md-4{% else %}col-md-6{% endif %} mb-3">
-                <div class="card h-100">
+        <div class="row text-center mb-4">
+            <div class="{% if development %}col-md-3{% else %}col-md-4{% endif %} mb-3">
+                <div class="card h-100 shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">📊 View Gallery</h5>
-                        <p class="card-text">Browse all submitted memes and their descriptions</p>
-                        <a href="{{ url_for('gallery') }}" class="btn btn-outline-primary">View Gallery</a>
+                        <div class="display-4 text-primary mb-3">📊</div>
+                        <h5 class="card-title">View Gallery</h5>
+                        <p class="card-text small">Browse all submitted memes and their detailed classifications</p>
+                        <a href="{{ url_for('gallery') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-images"></i> Browse Memes
+                        </a>
                     </div>
                 </div>
             </div>
-            <div class="{% if development %}col-md-4{% else %}col-md-6{% endif %} mb-3">
-                <div class="card h-100">
+            <div class="{% if development %}col-md-3{% else %}col-md-4{% endif %} mb-3">
+                <div class="card h-100 shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">📈 Statistics</h5>
-                        <p class="card-text">See how many people are contributing to the benchmark</p>
-                        <a href="{{ url_for('stats') }}" class="btn btn-outline-primary">View Stats</a>
+                        <div class="display-4 text-success mb-3">📈</div>
+                        <h5 class="card-title">Statistics</h5>
+                        <p class="card-text small">See dataset statistics and contributor metrics</p>
+                        <a href="{{ url_for('stats') }}" class="btn btn-outline-success">
+                            <i class="bi bi-bar-chart"></i> View Stats
+                        </a>
                     </div>
                 </div>
             </div>
+            {% if current_user %}
+                <div class="{% if development %}col-md-3{% else %}col-md-4{% endif %} mb-3">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="display-4 text-info mb-3">👤</div>
+                            <h5 class="card-title">Your Profile</h5>
+                            <p class="card-text small">View your contributions and performance analytics</p>
+                            <a href="{{ url_for('profile') }}" class="btn btn-outline-info">
+                                <i class="bi bi-person"></i> View Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="{% if development %}col-md-3{% else %}col-md-4{% endif %} mb-3">
+                    <div class="card h-100 shadow-sm border-warning">
+                        <div class="card-body">
+                            <div class="display-4 text-warning mb-3">🎓</div>
+                            <h5 class="card-title">Join Research</h5>
+                            <p class="card-text small">Register to track contributions and get research updates</p>
+                            <a href="{{ url_for('register') }}" class="btn btn-warning">
+                                <i class="bi bi-person-plus"></i> Register
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
             {% if development %}
-            <div class="col-md-4 mb-3">
-                <div class="card h-100">
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">🔄 Reset</h5>
-                        <p class="card-text">Start over with a fresh session (for testing)</p>
-                        <a href="{{ url_for('reset_session') }}" class="btn btn-outline-secondary">Reset Session</a>
+                        <div class="display-4 text-secondary mb-3">🔧</div>
+                        <h5 class="card-title">Dev Tools</h5>
+                        <p class="card-text small">Analytics dashboard and data export (dev only)</p>
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('analytics') }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-graph-up"></i> Analytics
+                            </a>
+                            <a href="{{ url_for('reset_session') }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-arrow-clockwise"></i> Reset
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
             {% endif %}
         </div>
+
+        <!-- Call to Action -->
+        <div class="card shadow-sm bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="card-body text-white text-center">
+                <h4 class="card-title">🌟 Ready to Contribute?</h4>
+                <p class="card-text">
+                    Join researchers worldwide in building the future of AI meme understanding. 
+                    Every evaluation and upload advances the science of computational humor!
+                </p>
+                <div class="d-grid gap-2 d-md-block">
+                    {% if evaluation_count < 10 %}
+                        <a href="{{ url_for('evaluate') }}" class="btn btn-light btn-lg me-2">
+                            <i class="bi bi-play-circle"></i> Start Evaluating
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('upload_file') }}" class="btn btn-light btn-lg me-2">
+                            <i class="bi bi-upload"></i> Upload Meme
+                        </a>
+                    {% endif %}
+                    {% if not current_user %}
+                        <a href="{{ url_for('register') }}" class="btn btn-outline-light btn-lg">
+                            <i class="bi bi-person-plus"></i> Join Research
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('profile') }}" class="btn btn-outline-light btn-lg">
+                            <i class="bi bi-person"></i> View Profile
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+<style>
+.user-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: bold;
+}
+
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.bg-gradient {
+    position: relative;
+    overflow: hidden;
+}
+
+.bg-gradient::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    pointer-events: none;
+}
+</style>
 {% endblock %}
