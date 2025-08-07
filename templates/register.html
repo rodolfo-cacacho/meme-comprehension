@@ -1,0 +1,487 @@
+<!-- templates/register.html -->
+{% extends "base.html" %}
+
+{% block title %}Register - MemeQA{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="text-center mb-5">
+            <h1>🎓 Join the Research</h1>
+            <p class="lead">Register to track your contributions and get updates on research findings</p>
+        </div>
+        
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">👤 Researcher Registration</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" id="registrationForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" required 
+                                   placeholder="Your full name">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="email" name="email" required 
+                                   placeholder="your@email.com">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="country" class="form-label">Country <span class="text-danger">*</span></label>
+                            <select class="form-select" id="country" name="country" required>
+                                <option value="">Select your country...</option>
+                                <option value="Germany">Germany</option>
+                                <option value="United States">United States</option>
+                                <option value="United Kingdom">United Kingdom</option>
+                                <option value="France">France</option>
+                                <option value="Spain">Spain</option>
+                                <option value="Italy">Italy</option>
+                                <option value="Canada">Canada</option>
+                                <option value="Australia">Australia</option>
+                                <option value="Japan">Japan</option>
+                                <option value="South Korea">South Korea</option>
+                                <option value="China">China</option>
+                                <option value="India">India</option>
+                                <option value="Brazil">Brazil</option>
+                                <option value="Mexico">Mexico</option>
+                                <option value="Russia">Russia</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="affiliation" class="form-label">Affiliation <span class="text-muted">(optional)</span></label>
+                            <input type="text" class="form-control" id="affiliation" name="affiliation" 
+                                   placeholder="University, Company, etc.">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="research_interest" class="form-label">Research Interest <span class="text-muted">(optional)</span></label>
+                        <select class="form-select" id="research_interest" name="research_interest">
+                            <option value="">Select your primary interest...</option>
+                            <option value="Vision-Language Models">Vision-Language Models</option>
+                            <option value="Cultural AI">Cultural AI</option>
+                            <option value="Computational Humor">Computational Humor</option>
+                            <option value="Internet Culture">Internet Culture</option>
+                            <option value="AI Benchmarking">AI Benchmarking</option>
+                            <option value="Multimodal Learning">Multimodal Learning</option>
+                            <option value="Social Media Analysis">Social Media Analysis</option>
+                            <option value="Human-AI Interaction">Human-AI Interaction</option>
+                            <option value="General AI Research">General AI Research</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Notification Preferences</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="notify_updates" name="notify_updates" checked>
+                            <label class="form-check-label" for="notify_updates">
+                                📬 Send me updates about research findings and publications
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="notify_milestones" name="notify_milestones" checked>
+                            <label class="form-check-label" for="notify_milestones">
+                                🎯 Notify me when we reach dataset milestones
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="data_access" name="data_access">
+                            <label class="form-check-label" for="data_access">
+                                📊 I'm interested in accessing the research dataset
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="privacy_agreement" name="privacy_agreement" required>
+                            <label class="form-check-label" for="privacy_agreement">
+                                <strong>Privacy Agreement:</strong> I understand that my email will only be used for 
+                                research updates and will not be shared with third parties. I can unsubscribe at any time. 
+                                <span class="text-danger">*</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            🚀 Join the Research
+                        </button>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                            Continue as Anonymous
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card shadow-sm mt-4">
+            <div class="card-body">
+                <h5 class="card-title">🎁 Benefits of Registering</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-unstyled">
+                            <li>📊 Track your contribution statistics</li>
+                            <li>📝 Get cited in research publications</li>
+                            <li>📧 Receive research updates and findings</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-unstyled">
+                            <li>🏆 Recognition for major contributions</li>
+                            <li>📚 Early access to research papers</li>
+                            <li>🤝 Connect with other researchers</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Form validation and enhancement
+document.getElementById('registrationForm').addEventListener('submit', function(e) {
+    const email = document.getElementById('email').value;
+    const name = document.getElementById('name').value;
+    const country = document.getElementById('country').value;
+    
+    if (!email || !name || !country) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+        return false;
+    }
+    
+    if (!document.getElementById('privacy_agreement').checked) {
+        e.preventDefault();
+        alert('Please agree to the privacy terms to continue.');
+        return false;
+    }
+    
+    // Show success message
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '⏳ Registering...';
+    submitBtn.disabled = true;
+});
+
+// Email validation
+document.getElementById('email').addEventListener('blur', function() {
+    const email = this.value;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (email && !emailRegex.test(email)) {
+        this.classList.add('is-invalid');
+        if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('invalid-feedback')) {
+            const feedback = document.createElement('div');
+            feedback.className = 'invalid-feedback';
+            feedback.textContent = 'Please enter a valid email address.';
+            this.parentNode.appendChild(feedback);
+        }
+    } else {
+        this.classList.remove('is-invalid');
+        const feedback = this.parentNode.querySelector('.invalid-feedback');
+        if (feedback) feedback.remove();
+    }
+});
+</script>
+{% endblock %}
+
+<!-- templates/profile.html -->
+{% extends "base.html" %}
+
+{% block title %}Your Profile - MemeQA{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>👤 Your Profile</h1>
+            <div>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-primary me-2">Back to Home</a>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary">Logout</a>
+            </div>
+        </div>
+        
+        <!-- Profile Information -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">📋 Profile Info</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <strong>Name:</strong> {{ contributor.name }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Email:</strong> {{ contributor.email }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Country:</strong> {{ contributor.country }}
+                        </div>
+                        {% if contributor.affiliation %}
+                        <div class="mb-2">
+                            <strong>Affiliation:</strong> {{ contributor.affiliation }}
+                        </div>
+                        {% endif %}
+                        {% if contributor.research_interest %}
+                        <div class="mb-2">
+                            <strong>Research Interest:</strong> {{ contributor.research_interest }}
+                        </div>
+                        {% endif %}
+                        <div class="mb-2">
+                            <strong>Member Since:</strong> {{ contributor.registration_date[:10] }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="card shadow-sm text-center h-100">
+                            <div class="card-body">
+                                <h2 class="text-primary">{{ contributor.total_submissions }}</h2>
+                                <p class="card-text">Memes Contributed</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card shadow-sm text-center h-100">
+                            <div class="card-body">
+                                <h2 class="text-success">{{ contributor.total_evaluations }}</h2>
+                                <p class="card-text">Evaluations Completed</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card shadow-sm text-center h-100">
+                            <div class="card-body">
+                                <h2 class="text-info">{{ accuracy_rate }}%</h2>
+                                <p class="card-text">Evaluation Accuracy</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card shadow-sm text-center h-100">
+                            <div class="card-body">
+                                <h2 class="text-warning">{{ contributor_rank }}</h2>
+                                <p class="card-text">Global Rank</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Achievement Badges -->
+        {% if badges %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">🏆 Achievement Badges</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for badge in badges %}
+                    <div class="col-md-3 mb-3 text-center">
+                        <div class="badge-container">
+                            <div class="achievement-badge {{ badge.type }}">
+                                {{ badge.icon }}
+                            </div>
+                            <h6 class="mt-2">{{ badge.name }}</h6>
+                            <small class="text-muted">{{ badge.description }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Your Recent Contributions -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">📤 Your Recent Meme Contributions</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_memes %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Preview</th>
+                                <th>Content</th>
+                                <th>Humor Type</th>
+                                <th>Platform</th>
+                                <th>Evaluations</th>
+                                <th>Accuracy</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for meme in recent_memes %}
+                            <tr>
+                                <td>
+                                    <img src="{{ url_for('uploaded_file', filename=meme.filename) }}" 
+                                         style="width: 60px; height: 40px; object-fit: cover;" 
+                                         class="rounded">
+                                </td>
+                                <td>
+                                    <small>{{ meme.meme_content[:50] }}{% if meme.meme_content|length > 50 %}...{% endif %}</small>
+                                </td>
+                                <td><span class="badge bg-secondary">{{ meme.humor_type }}</span></td>
+                                <td><span class="badge bg-info">{{ meme.platform_found }}</span></td>
+                                <td class="text-center">{{ meme.total_evaluations or 0 }}</td>
+                                <td class="text-center">
+                                    {% if meme.accuracy_rate is not none %}
+                                        <span class="badge {% if meme.accuracy_rate > 0.8 %}bg-success{% elif meme.accuracy_rate > 0.5 %}bg-warning{% else %}bg-danger{% endif %}">
+                                            {{ "%.0f"|format(meme.accuracy_rate * 100) }}%
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td><small>{{ meme.upload_date[:10] }}</small></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">You haven't contributed any memes yet. <a href="{{ url_for('upload_file') }}">Upload your first meme!</a></p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Evaluation Statistics -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">📊 Your Evaluation Performance</h5>
+            </div>
+            <div class="card-body">
+                {% if evaluation_stats %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <canvas id="accuracyChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Performance Breakdown</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Total Evaluations:</strong> {{ evaluation_stats.total_evaluations }}</li>
+                            <li><strong>Correct:</strong> {{ evaluation_stats.correct_evaluations }}</li>
+                            <li><strong>Accuracy:</strong> {{ "%.1f"|format(evaluation_stats.accuracy * 100) }}%</li>
+                            <li><strong>Avg. Time per Eval:</strong> {{ "%.0f"|format(evaluation_stats.avg_time) }}s</li>
+                        </ul>
+                        
+                        <h6 class="mt-3">Difficulty Performance</h6>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {{ evaluation_stats.easy_accuracy * 100 }}%">
+                                Easy: {{ "%.0f"|format(evaluation_stats.easy_accuracy * 100) }}%
+                            </div>
+                        </div>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-warning" role="progressbar" 
+                                 style="width: {{ evaluation_stats.medium_accuracy * 100 }}%">
+                                Medium: {{ "%.0f"|format(evaluation_stats.medium_accuracy * 100) }}%
+                            </div>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-danger" role="progressbar" 
+                                 style="width: {{ evaluation_stats.hard_accuracy * 100 }}%">
+                                Hard: {{ "%.0f"|format(evaluation_stats.hard_accuracy * 100) }}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted">You haven't completed any evaluations yet. <a href="{{ url_for('evaluate') }}">Start evaluating memes!</a></p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.achievement-badge {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2em;
+    margin: 0 auto;
+    color: white;
+    font-weight: bold;
+}
+
+.achievement-badge.gold {
+    background: linear-gradient(45deg, #FFD700, #FFA500);
+}
+
+.achievement-badge.silver {
+    background: linear-gradient(45deg, #C0C0C0, #808080);
+}
+
+.achievement-badge.bronze {
+    background: linear-gradient(45deg, #CD7F32, #8B4513);
+}
+
+.achievement-badge.special {
+    background: linear-gradient(45deg, #9B59B6, #8E44AD);
+}
+
+.badge-container {
+    transition: transform 0.2s;
+}
+
+.badge-container:hover {
+    transform: scale(1.05);
+}
+
+.table img {
+    border: 1px solid #dee2e6;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+{% if evaluation_stats %}
+// Create accuracy chart
+const ctx = document.getElementById('accuracyChart').getContext('2d');
+const chart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Correct', 'Incorrect'],
+        datasets: [{
+            data: [{{ evaluation_stats.correct_evaluations }}, {{ evaluation_stats.total_evaluations - evaluation_stats.correct_evaluations }}],
+            backgroundColor: ['#28a745', '#dc3545'],
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            },
+            title: {
+                display: true,
+                text: 'Evaluation Accuracy'
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

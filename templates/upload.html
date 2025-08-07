@@ -1,48 +1,406 @@
+<!-- Enhanced upload form with comprehensive meme classification -->
 {% extends "base.html" %}
 
-{% block title %}Upload Meme - Meme Benchmark{% endblock %}
+{% block title %}Upload Meme - MemeQA Enhanced{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-10 col-lg-8">
-        <h1>Upload Your Meme</h1>
-        <p class="lead mb-4">Upload a meme and provide 4 different descriptions for it.</p>
+    <div class="col-md-10 col-lg-9">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>📤 Upload & Classify Meme</h1>
+            <span class="badge bg-info fs-6">Enhanced Data Collection</span>
+        </div>
         
-        <form method="post" enctype="multipart/form-data">
+        <p class="lead mb-4">Help us build a comprehensive meme understanding dataset by providing detailed classification information.</p>
+        
+        <form method="post" enctype="multipart/form-data" id="memeUploadForm">
+            <!-- User Information Section -->
             <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">👤 Contributor Information</h4>
+                </div>
                 <div class="card-body">
-                    <h4 class="card-title">Meme Image</h4>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="contributor_name" class="form-label">Name/Username <span class="text-muted">(optional)</span></label>
+                            <input type="text" class="form-control" id="contributor_name" name="contributor_name" 
+                                   placeholder="Your name or username">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="contributor_email" class="form-label">Email <span class="text-muted">(optional, for research updates)</span></label>
+                            <input type="email" class="form-control" id="contributor_email" name="contributor_email" 
+                                   placeholder="your@email.com">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="country_of_submission" class="form-label">Country of Submission <span class="text-danger">*</span></label>
+                            <select class="form-select" id="country_of_submission" name="country_of_submission" required>
+                                <option value="">Select your country...</option>
+                                <option value="Germany">Germany</option>
+                                <option value="United States">United States</option>
+                                <option value="United Kingdom">United Kingdom</option>
+                                <option value="France">France</option>
+                                <option value="Spain">Spain</option>
+                                <option value="Italy">Italy</option>
+                                <option value="Canada">Canada</option>
+                                <option value="Australia">Australia</option>
+                                <option value="Japan">Japan</option>
+                                <option value="South Korea">South Korea</option>
+                                <option value="China">China</option>
+                                <option value="India">India</option>
+                                <option value="Brazil">Brazil</option>
+                                <option value="Mexico">Mexico</option>
+                                <option value="Russia">Russia</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="platform_found" class="form-label">Platform Where Found <span class="text-danger">*</span></label>
+                            <select class="form-select" id="platform_found" name="platform_found" required>
+                                <option value="">Select platform...</option>
+                                <option value="Reddit">Reddit</option>
+                                <option value="Twitter/X">Twitter/X</option>
+                                <option value="Instagram">Instagram</option>
+                                <option value="TikTok">TikTok</option>
+                                <option value="Facebook">Facebook</option>
+                                <option value="Discord">Discord</option>
+                                <option value="4chan">4chan</option>
+                                <option value="9GAG">9GAG</option>
+                                <option value="Imgur">Imgur</option>
+                                <option value="YouTube">YouTube</option>
+                                <option value="WhatsApp">WhatsApp</option>
+                                <option value="Telegram">Telegram</option>
+                                <option value="Original Creation">Original Creation</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Meme Upload Section -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">🖼️ Meme Image</h4>
+                </div>
+                <div class="card-body">
                     <div class="mb-3">
-                        <label for="file" class="form-label">Choose Meme</label>
+                        <label for="file" class="form-label">Choose Meme <span class="text-danger">*</span></label>
                         <input type="file" class="form-control" id="file" name="file" 
                                accept="image/png,image/jpeg,image/jpg,image/gif" required>
                         <div class="form-text">Supported formats: PNG, JPG, JPEG, GIF (max 16MB)</div>
                     </div>
+                    <div id="imagePreview" class="text-center" style="display: none;">
+                        <img id="previewImg" class="img-fluid" style="max-height: 300px;">
+                    </div>
                 </div>
             </div>
 
+            <!-- Content Classification Section -->
             <div class="card shadow-sm mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">🔍 Content Classification</h4>
+                </div>
                 <div class="card-body">
-                    <h4 class="card-title">Descriptions</h4>
-                    <p class="text-muted mb-4">Provide 4 different descriptions for your meme. Try to make them varied - some funny, some literal, some contextual, etc.</p>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="meme_content" class="form-label">Content Description <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="meme_content" name="meme_content" 
+                                      rows="3" placeholder="Describe what is happening in this meme (literal content, characters, setting, etc.)" required></textarea>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="meme_template" class="form-label">Meme Template/Format <span class="text-muted">(if applicable)</span></label>
+                            <input type="text" class="form-control" id="meme_template" name="meme_template" 
+                                   placeholder="e.g., Drake pointing, Distracted boyfriend, etc.">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="estimated_year" class="form-label">Estimated Year/Era <span class="text-danger">*</span></label>
+                            <select class="form-select" id="estimated_year" name="estimated_year" required>
+                                <option value="">Select year range...</option>
+                                <option value="2024-2025">2024-2025 (Current)</option>
+                                <option value="2022-2023">2022-2023</option>
+                                <option value="2020-2021">2020-2021 (COVID Era)</option>
+                                <option value="2018-2019">2018-2019</option>
+                                <option value="2016-2017">2016-2017</option>
+                                <option value="2014-2015">2014-2015</option>
+                                <option value="2012-2013">2012-2013</option>
+                                <option value="2010-2011">2010-2011</option>
+                                <option value="2008-2009">2008-2009</option>
+                                <option value="Pre-2008">Pre-2008 (Classic Internet)</option>
+                                <option value="Unknown">Unknown</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="cultural_reach" class="form-label">Cultural Reach <span class="text-danger">*</span></label>
+                            <select class="form-select" id="cultural_reach" name="cultural_reach" required>
+                                <option value="">Select reach...</option>
+                                <option value="Global">Global (understood worldwide)</option>
+                                <option value="Western">Western Culture</option>
+                                <option value="Regional">Regional (specific continent/region)</option>
+                                <option value="National">National (country-specific)</option>
+                                <option value="Local">Local (city/community specific)</option>
+                                <option value="Niche">Niche Community</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="niche_community" class="form-label">Niche Community <span class="text-muted">(if applicable)</span></label>
+                            <input type="text" class="form-control" id="niche_community" name="niche_community" 
+                                   placeholder="e.g., Gaming, Tech, Sports, Academic, etc.">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Humor & Emotion Analysis Section -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">😄 Humor & Emotional Analysis</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="humor_explanation" class="form-label">Why is this humorous/relatable? <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="humor_explanation" name="humor_explanation" 
+                                      rows="3" placeholder="Explain the joke, irony, relatability, or what makes this meme funny/engaging" required></textarea>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="humor_type" class="form-label">Type of Humor <span class="text-danger">*</span></label>
+                            <select class="form-select" id="humor_type" name="humor_type" required>
+                                <option value="">Select humor type...</option>
+                                <option value="Irony/Sarcasm">Irony/Sarcasm</option>
+                                <option value="Relatability">Relatability</option>
+                                <option value="Absurd/Random">Absurd/Random</option>
+                                <option value="Wordplay/Puns">Wordplay/Puns</option>
+                                <option value="Visual Humor">Visual Humor</option>
+                                <option value="Dark Humor">Dark Humor</option>
+                                <option value="Self-deprecating">Self-deprecating</option>
+                                <option value="Social Commentary">Social Commentary</option>
+                                <option value="Pop Culture Reference">Pop Culture Reference</option>
+                                <option value="Wholesome">Wholesome</option>
+                                <option value="Not Humorous">Not Humorous</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Primary Emotions Conveyed <span class="text-danger">*</span></label>
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="emotions" value="Joy" id="emotion_joy">
+                                        <label class="form-check-label" for="emotion_joy">😄 Joy</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="emotions" value="Frustration" id="emotion_frustration">
+                                        <label class="form-check-label" for="emotion_frustration">😤 Frustration</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="emotions" value="Confusion" id="emotion_confusion">
+                                        <label class="form-check-label" for="emotion_confusion">😕 Confusion</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="emotions" value="Pride" id="emotion_pride">
+                                        <label class="form-check-label" for="emotion_pride">😎 Pride</label>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="emotions" value="Nostalgia" id="emotion_nostalgia">
+                                        <label class="form-check-label" for="emotion_nostalgia">🥺 Nostalgia</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="emotions" value="Anxiety" id="emotion_anxiety">
+                                        <label class="form-check-label" for="emotion_anxiety">😰 Anxiety</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="emotions" value="Relief" id="emotion_relief">
+                                        <label class="form-check-label" for="emotion_relief">😌 Relief</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="emotions" value="Surprise" id="emotion_surprise">
+                                        <label class="form-check-label" for="emotion_surprise">😲 Surprise</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Context & References Section -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h4 class="mb-0">🔗 Context & References</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="cultural_references" class="form-label">Cultural/Pop Culture References <span class="text-muted">(if any)</span></label>
+                            <textarea class="form-control" id="cultural_references" name="cultural_references" 
+                                      rows="2" placeholder="Movies, TV shows, celebrities, events, trends, etc. that this meme references"></textarea>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="context_required" class="form-label">Context Knowledge Required <span class="text-danger">*</span></label>
+                            <select class="form-select" id="context_required" name="context_required" required>
+                                <option value="">Select level...</option>
+                                <option value="None">None (self-explanatory)</option>
+                                <option value="Basic Internet">Basic Internet Knowledge</option>
+                                <option value="Pop Culture">Pop Culture Awareness</option>
+                                <option value="Current Events">Current Events Knowledge</option>
+                                <option value="Specialized">Specialized Knowledge</option>
+                                <option value="Deep Context">Deep Context Required</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="age_group_target" class="form-label">Target Age Group <span class="text-muted">(approximate)</span></label>
+                            <select class="form-select" id="age_group_target" name="age_group_target">
+                                <option value="">Select age group...</option>
+                                <option value="Gen Z (1997-2012)">Gen Z (1997-2012)</option>
+                                <option value="Millennial (1981-1996)">Millennial (1981-1996)</option>
+                                <option value="Gen X (1965-1980)">Gen X (1965-1980)</option>
+                                <option value="Boomer (1946-1964)">Boomer (1946-1964)</option>
+                                <option value="All Ages">All Ages</option>
+                                <option value="Unknown">Unknown</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Training Descriptions Section -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">🤖 AI Training Descriptions</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Instructions:</strong> Provide 4 different descriptions of this meme:
+                        <br><strong>1 CORRECT</strong> description that best captures the meme's essence
+                        <br><strong>3 INCORRECT</strong> descriptions that are plausible but miss the mark
+                    </div>
                     
                     <div class="row">
-                        {% for i in range(1, 5) %}
                         <div class="col-md-6 mb-3">
-                            <label for="description_{{ i }}" class="form-label">Description {{ i }}</label>
-                            <textarea class="form-control" id="description_{{ i }}" name="description_{{ i }}" 
-                                      rows="3" placeholder="Enter description {{ i }}..." required></textarea>
+                            <label for="description_1" class="form-label">Description 1 <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="description_1" name="description_1" 
+                                      rows="3" placeholder="Enter first description..." required></textarea>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="radio" name="correct_description" value="1" id="correct_1" required>
+                                <label class="form-check-label" for="correct_1">This is the CORRECT description</label>
+                            </div>
                         </div>
-                        {% endfor %}
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="description_2" class="form-label">Description 2 <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="description_2" name="description_2" 
+                                      rows="3" placeholder="Enter second description..." required></textarea>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="radio" name="correct_description" value="2" id="correct_2" required>
+                                <label class="form-check-label" for="correct_2">This is the CORRECT description</label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="description_3" class="form-label">Description 3 <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="description_3" name="description_3" 
+                                      rows="3" placeholder="Enter third description..." required></textarea>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="radio" name="correct_description" value="3" id="correct_3" required>
+                                <label class="form-check-label" for="correct_3">This is the CORRECT description</label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="description_4" class="form-label">Description 4 <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="description_4" name="description_4" 
+                                      rows="3" placeholder="Enter fourth description..." required></textarea>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="radio" name="correct_description" value="4" id="correct_4" required>
+                                <label class="form-check-label" for="correct_4">This is the CORRECT description</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Notes Section -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <label for="additional_notes" class="form-label">Additional Notes <span class="text-muted">(optional)</span></label>
+                    <textarea class="form-control" id="additional_notes" name="additional_notes" 
+                              rows="3" placeholder="Any additional context, variations, or notes about this meme"></textarea>
+                </div>
+            </div>
+            
+            <!-- Terms Agreement -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="terms_agreement" name="terms_agreement" required>
+                        <label class="form-check-label" for="terms_agreement">
+                            <strong>I agree that:</strong> I have the right to share this image, it doesn't violate copyright, 
+                            and I consent to its use for research purposes by THWS and CAIRO. <span class="text-danger">*</span>
+                        </label>
                     </div>
                 </div>
             </div>
             
-            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                <a href="{{ url_for('index') }}" class="btn btn-secondary me-md-2">Cancel</a>
-                <button type="submit" class="btn btn-primary">Upload Meme</button>
+            <!-- Submit Button -->
+            <div class="text-center mb-4">
+                <button type="submit" class="btn btn-primary btn-lg px-5">
+                    🚀 Submit Meme Classification
+                </button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+// Image preview functionality
+document.getElementById('file').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    const preview = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
+    
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        preview.style.display = 'none';
+    }
+});
+
+// Ensure at least one emotion is selected
+document.getElementById('memeUploadForm').addEventListener('submit', function(event) {
+    const emotions = document.querySelectorAll('input[name="emotions"]:checked');
+    if (emotions.length === 0) {
+        event.preventDefault();
+        alert('Please select at least one emotion that the meme conveys.');
+        return false;
+    }
+});
+
+// Dynamic form interactions
+document.getElementById('cultural_reach').addEventListener('change', function() {
+    const nicheField = document.getElementById('niche_community');
+    const nicheLabel = document.querySelector('label[for="niche_community"]');
+    
+    if (this.value === 'Niche') {
+        nicheField.required = true;
+        nicheLabel.innerHTML = 'Niche Community <span class="text-danger">*</span>';
+    } else {
+        nicheField.required = false;
+        nicheLabel.innerHTML = 'Niche Community <span class="text-muted">(if applicable)</span>';
+    }
+});
+</script>
 {% endblock %}

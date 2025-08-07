@@ -1,0 +1,284 @@
+<!-- templates/evaluate_enhanced.html -->
+{% extends "base.html" %}
+
+{% block title %}Evaluate Meme - MemeQA Enhanced{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>🧠 Evaluate Meme</h1>
+            <div class="text-end">
+                <span class="badge bg-info fs-6 me-2">Progress: {{ evaluation_count }}/10</span>
+                <span class="badge bg-secondary fs-6" id="timer">⏱️ 00:00</span>
+            </div>
+        </div>
+
+        <!-- Instructions Card -->
+        <div class="card shadow-sm mb-4 bg-light">
+            <div class="card-body">
+                <h5 class="card-title">📋 Instructions</h5>
+                <p class="card-text mb-0">
+                    <strong>Choose the description that best captures this meme's essence:</strong> 
+                    Consider the humor, cultural context, and what makes this meme relatable or funny. 
+                    There's one correct answer among the four options.
+                </p>
+            </div>
+        </div>
+
+        <!-- Meme Display Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">🖼️ Meme #{{ meme.id }}</h5>
+                <small>{{ meme.platform_found }} • {{ meme.estimated_year }}</small>
+            </div>
+            <div class="card-body text-center">
+                <img src="{{ url_for('uploaded_file', filename=meme.filename) }}" 
+                     class="meme-img mb-3" 
+                     alt="{{ meme.original_filename }}"
+                     style="max-height: 450px; max-width: 100%; object-fit: contain;">
+            </div>
+        </div>
+
+        <!-- Context Information (if available) -->
+        {% if meme.cultural_reach or meme.humor_type %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row text-center">
+                    {% if meme.cultural_reach %}
+                    <div class="col-md-4">
+                        <span class="badge bg-secondary">{{ meme.cultural_reach }} Reach</span>
+                    </div>
+                    {% endif %}
+                    {% if meme.humor_type %}
+                    <div class="col-md-4">
+                        <span class="badge bg-warning text-dark">{{ meme.humor_type }}</span>
+                    </div>
+                    {% endif %}
+                    {% if meme.context_required %}
+                    <div class="col-md-4">
+                        <span class="badge bg-info">{{ meme.context_required }} Context</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Evaluation Form -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0">🤔 Choose the Best Description</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('submit_evaluation') }}" id="evaluationForm">
+                    <input type="hidden" name="meme_id" value="{{ meme.id }}">
+                    <input type="hidden" name="evaluation_time" id="evaluation_time" value="0">
+                    
+                    <div class="row">
+                        {% for desc_num, description in descriptions %}
+                        <div class="col-md-6 mb-4">
+                            <label class="evaluation-card w-100 h-100">
+                                <input type="radio" name="chosen_description" value="{{ desc_num }}" 
+                                       class="d-none" required>
+                                <div class="card h-100 option-card" data-option="{{ loop.index }}">
+                                    <div class="card-header bg-light">
+                                        <h6 class="card-title mb-0">
+                                            <span class="option-letter">{{ ['A', 'B', 'C', 'D'][loop.index0] }}</span>
+                                            Option {{ loop.index }}
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="card-text">{{ description }}</p>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Confidence Level -->
+                    <div class="card bg-light mt-4">
+                        <div class="card-body">
+                            <h6 class="card-title">How confident are you in your choice?</h6>
+                            <div class="btn-group w-100" role="group" aria-label="Confidence level">
+                                <input type="radio" class="btn-check" name="confidence_level" id="conf1" value="1">
+                                <label class="btn btn-outline-danger" for="conf1">😰 Not Sure</label>
+                                
+                                <input type="radio" class="btn-check" name="confidence_level" id="conf2" value="2">
+                                <label class="btn btn-outline-warning" for="conf2">🤔 Somewhat</label>
+                                
+                                <input type="radio" class="btn-check" name="confidence_level" id="conf3" value="3" checked>
+                                <label class="btn btn-outline-info" for="conf3">😊 Confident</label>
+                                
+                                <input type="radio" class="btn-check" name="confidence_level" id="conf4" value="4">
+                                <label class="btn btn-outline-success" for="conf4">💪 Very Sure</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg px-5" id="submitBtn" disabled>
+                            ✅ Submit Evaluation
+                        </button>
+                        <div class="mt-2">
+                            <small class="text-muted">Select an option to continue</small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Skip Option (for problematic memes) -->
+        <div class="text-center mt-3">
+            <details class="text-muted">
+                <summary style="cursor: pointer;">Having trouble with this meme?</summary>
+                <div class="mt-2">
+                    <p class="small">If this meme is unclear, inappropriate, or you can't determine the best description:</p>
+                    <a href="{{ url_for('evaluate') }}" class="btn btn-outline-secondary btn-sm">
+                        ⏭️ Skip This Meme
+                    </a>
+                </div>
+            </details>
+        </div>
+    </div>
+</div>
+
+<style>
+.evaluation-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.option-card {
+    border: 2px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.option-card:hover {
+    border-color: #007bff;
+    box-shadow: 0 4px 12px rgba(0,123,255,0.15);
+    transform: translateY(-2px);
+}
+
+.evaluation-card input[type="radio"]:checked + .option-card {
+    border-color: #28a745;
+    background-color: #f8fff9;
+    box-shadow: 0 4px 12px rgba(40,167,69,0.25);
+    transform: translateY(-2px);
+}
+
+.evaluation-card input[type="radio"]:checked + .option-card .card-header {
+    background-color: #28a745;
+    color: white;
+}
+
+.option-letter {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.meme-img {
+    max-width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+#timer {
+    font-family: monospace;
+    min-width: 80px;
+}
+
+.btn-check:checked + .btn-outline-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-check:checked + .btn-outline-warning {
+    background-color: #ffc107;
+    color: black;
+}
+
+.btn-check:checked + .btn-outline-info {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.btn-check:checked + .btn-outline-success {
+    background-color: #28a745;
+    color: white;
+}
+
+details summary {
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+details[open] summary {
+    margin-bottom: 10px;
+}
+</style>
+
+<script>
+let startTime = Date.now();
+let timerInterval;
+
+// Timer functionality
+function updateTimer() {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    document.getElementById('timer').textContent = 
+        `⏱️ ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+// Start timer
+timerInterval = setInterval(updateTimer, 1000);
+
+// Enable submit button when option selected
+document.querySelectorAll('input[name="chosen_description"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.getElementById('submitBtn').disabled = false;
+        document.querySelector('.text-muted').textContent = 'Click submit when ready';
+        
+        // Add visual feedback
+        document.querySelectorAll('.option-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        this.closest('.option-card').classList.add('selected');
+    });
+});
+
+// Handle form submission
+document.getElementById('evaluationForm').addEventListener('submit', function(e) {
+    const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById('evaluation_time').value = elapsedSeconds;
+    
+    // Stop timer
+    clearInterval(timerInterval);
+    
+    // Disable submit button to prevent double submission
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '⏳ Submitting...';
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.key >= '1' && e.key <= '4') {
+        const options = document.querySelectorAll('input[name="chosen_description"]');
+        const index = parseInt(e.key) - 1;
+        if (options[index]) {
+            options[index].checked = true;
+            options[index].dispatchEvent(new Event('change'));
+        }
+    } else if (e.key === 'Enter' && !document.getElementById('submitBtn').disabled) {
+        document.getElementById('evaluationForm').submit();
+    }
+});
+
+// Add keyboard shortcut hints
+document.querySelector('.text-center .text-muted').innerHTML += 
+    '<br><small>💡 Tip: Use keys 1-4 to select options, Enter to submit</small>';
+</script>
+{% endblock %}
