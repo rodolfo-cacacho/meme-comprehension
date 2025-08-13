@@ -40,7 +40,7 @@
                         <div class="text-center">
                             <div class="display-1 mb-2">2️⃣</div>
                             <h5>Upload & Classify</h5>
-                            <p class="small text-muted">After 10 evaluations, upload your own memes with detailed cultural and humor classifications.</p>
+                            <p class="small text-muted">After {{eval_mems}} evaluations, upload your own memes with detailed cultural and humor classifications.</p>
                         </div>
                     </div>
                     <div class="col-md-4 mb-3">
@@ -123,10 +123,10 @@
                     {% endif %}
                 </div>
                 
-                {% if available_memes < 10 %}
+                {% if available_memes < memes_min %}
                     <div class="alert alert-info">
                         <h5>🚀 Bootstrap Phase</h5>
-                        <p class="mb-2">Only {{ available_memes }} memes available for evaluation. You can upload without completing 10 evaluations to help build the initial dataset!</p>
+                        <p class="mb-2">Only {{ available_memes }} memes available for evaluation. You can upload without completing {{eval_mems}} evaluations to help build the initial dataset!</p>
                         <a href="{{ url_for('upload_file') }}" class="btn btn-primary">
                             <i class="bi bi-upload"></i> Upload Meme
                         </a>
@@ -138,11 +138,11 @@
                         <div class="mb-3">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <span><strong>Evaluations completed:</strong></span>
-                                <span class="badge bg-primary fs-6">{{ evaluation_count }}/10</span>
+                                <span class="badge bg-primary fs-6">{{ evaluation_count }}/{{ eval_mems }}</span>
                             </div>
                             <div class="progress progress-bar-custom">
                                 <div class="progress-bar" role="progressbar" 
-                                     style="width: {{ (evaluation_count/10*100)|round }}%"
+                                     style="width: {{ (evaluation_count/eval_mems*100)|round }}%"
                                      aria-valuenow="{{ evaluation_count }}" 
                                      aria-valuemin="0" aria-valuemax="10">
                                     {{ evaluation_count }}/10
@@ -191,7 +191,7 @@
                         {% elif not can_upload %}
                             <div class="alert alert-warning mb-0">
                                 <h6>📝 Keep Going!</h6>
-                                <p class="small mb-2">Complete {{ 10 - evaluation_count }} more evaluation{{ 's' if (10 - evaluation_count) != 1 else '' }} to unlock uploads.</p>
+                                <p class="small mb-2">Complete {{ eval_mems - evaluation_count }} more evaluation{{ 's' if (eval_mems - evaluation_count) != 1 else '' }} to unlock uploads.</p>
                                 <a href="{{ url_for('evaluate') }}" class="btn btn-warning btn-sm w-100">
                                     {% if evaluation_count == 0 %}
                                         <i class="bi bi-play"></i> Start Evaluating

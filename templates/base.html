@@ -71,6 +71,7 @@
     </style>
 </head>
 <body>
+    <!-- Updated navigation section for base.html - Sign in only in dropdown -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">
@@ -100,8 +101,8 @@
                             <i class="bi bi-check-square"></i> Evaluate
                             {% if current_user %}
                                 {% set eval_count = current_user.total_evaluations or 0 %}
-                                {% if eval_count < 10 %}
-                                    <span class="badge bg-warning nav-badge">{{ eval_count }}/10</span>
+                                {% if eval_count < eval_mems %}
+                                    <span class="badge bg-warning nav-badge">{{ eval_count }}/ {{ eval_mems }}</span>
                                 {% endif %}
                             {% endif %}
                         </a>
@@ -131,7 +132,7 @@
                         <!-- Logged in user -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle user-info" href="#" id="userDropdown" 
-                               role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <div class="user-avatar bg-success text-white">
                                     {{ current_user.name[:1].upper() }}
                                 </div>
@@ -178,7 +179,7 @@
                         <!-- Anonymous user -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle user-info" href="#" id="anonDropdown" 
-                               role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <div class="user-avatar bg-secondary text-white">
                                     <i class="bi bi-person"></i>
                                 </div>
@@ -192,13 +193,19 @@
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
+                                    <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#quickLoginModal">
+                                        <i class="bi bi-box-arrow-in-right"></i> Sign In
+                                    </button>
+                                </li>
+                                <li>
                                     <a class="dropdown-item" href="{{ url_for('register') }}">
                                         <i class="bi bi-person-plus"></i> Join Research
                                     </a>
                                 </li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <span class="dropdown-item-text small text-muted">
-                                        Register to track contributions and get research updates
+                                        Sign in to track contributions and get research updates
                                     </span>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
@@ -211,7 +218,7 @@
                                     {% set session_evals = get_user_evaluation_count() if get_user_evaluation_count else 0 %}
                                     <li>
                                         <span class="dropdown-item-text small">
-                                            <i class="bi bi-check-circle"></i> Evaluations: {{ session_evals }}/10
+                                            <i class="bi bi-check-circle"></i> Evaluations: {{ session_evals }}/{{ eval_mems }}
                                         </span>
                                     </li>
                                 {% endif %}
@@ -222,6 +229,63 @@
             </div>
         </div>
     </nav>
+
+    <!-- Quick Login Modal -->
+    {% if not current_user %}
+    <div class="modal fade" id="quickLoginModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-box-arrow-in-right"></i> Sign In to MemeQA
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">Enter your email to receive a secure login link:</p>
+                    <form method="post" action="{{ url_for('request_login') }}" id="quickLoginForm">
+                        <div class="mb-3">
+                            <label for="quick_login_email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="quick_login_email" name="login_email" 
+                                placeholder="your@email.com" required>
+                            <div class="form-text">We'll send you a login link - no password needed!</div>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-envelope"></i> Send Login Link
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <small class="text-muted">
+                        <i class="bi bi-shield-check"></i> Secure email-based authentication
+                    </small>
+                    <div>
+                        <small class="text-muted">Don't have an account?</small>
+                        <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-person-plus"></i> Register
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Auto-focus email field when modal opens
+    document.getElementById('quickLoginModal').addEventListener('shown.bs.modal', function () {
+        document.getElementById('quick_login_email').focus();
+    });
+
+    // Handle quick login form submission
+    document.getElementById('quickLoginForm').addEventListener('submit', function() {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="bi bi-envelope"></i> Sending...';
+        submitBtn.disabled = true;
+    });
+    </script>
+    {% endif %}
 
     <div class="container mt-4">
         <!-- Flash messages -->
@@ -238,11 +302,11 @@
 
         <!-- User status banner (for important messages) -->
         {% if current_user %}
-            {% if current_user.total_evaluations < 10 %}
+            {% if current_user.total_evaluations < eval_mems %}
                 <div class="alert alert-primary alert-dismissible fade show" role="alert">
                     <i class="bi bi-info-circle"></i>
                     <strong>Welcome back, {{ current_user.name.split()[0] }}!</strong> 
-                    You need {{ 10 - (current_user.total_evaluations or 0) }} more evaluations to unlock meme uploads.
+                    You need {{ eval_mems - (current_user.total_evaluations or 0) }} more evaluations to unlock meme uploads.
                     <a href="{{ url_for('evaluate') }}" class="btn btn-sm btn-outline-primary ms-2">Continue Evaluating</a>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>

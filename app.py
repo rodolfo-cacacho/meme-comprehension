@@ -31,7 +31,9 @@ DEVELOPMENT = os.environ.get('ENV') == 'development' or app.debug
 print(f"Running in {'development' if DEVELOPMENT else 'production'} mode")
 
 # Allowed file extensions
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
+MIN_MEME_COUNT = 5
+EVAL_COUNT = 5  # Number of evaluations required to upload memes
 
 # Create uploads directory if it doesn't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -54,7 +56,8 @@ def init_db():
             -- Contributor Information
             contributor_name TEXT,
             contributor_email TEXT,
-            country_of_submission TEXT NOT NULL,
+            contributor_country TEXT NOT NULL,
+            meme_origin_country TEXT,
             platform_found TEXT NOT NULL,
             uploader_session TEXT,
             uploader_user_id INTEGER,
@@ -77,11 +80,7 @@ def init_db():
             age_group_target TEXT,
             
             -- AI Training Descriptions
-            description_1 TEXT NOT NULL,
-            description_2 TEXT NOT NULL,
-            description_3 TEXT NOT NULL,
-            description_4 TEXT NOT NULL,
-            correct_description INTEGER NOT NULL, -- 1-4 indicating which is correct
+            meme_description TEXT NOT NULL,
             
             -- Additional Data
             additional_notes TEXT,
@@ -440,6 +439,8 @@ def index():
     return render_template('index.html', 
                          evaluation_count=evaluation_count, 
                          available_memes=available_memes,
+                         eval_mems = EVAL_COUNT,
+                         memes_min = MIN_MEME_COUNT,
                          can_upload=can_upload,
                          development=DEVELOPMENT,
                          current_user=current_user)
@@ -501,7 +502,9 @@ def register():
         flash(f'Welcome to MemeQA, {name}! Your account has been created successfully.')
         return redirect(url_for('index'))
     
-    return render_template('register.html')
+    return render_template('register.html',
+                           eval_mems = EVAL_COUNT,
+                           memes_min = MIN_MEME_COUNT)
 
 @app.route('/request_login', methods=['POST'])
 def request_login():
@@ -553,7 +556,8 @@ THWS & CAIRO
 def login_sent():
     """Show confirmation that login link was sent"""
     email = request.args.get('email', '')
-    return render_template('login_sent.html', email=email)
+    return render_template('login_sent.html',eval_mems = EVAL_COUNT,
+                           memes_min = MIN_MEME_COUNT,email=email)
 
 @app.route('/login/<token>')
 def login_with_token(token):
@@ -686,7 +690,9 @@ def profile():
                          recent_memes=recent_memes,
                          evaluation_stats=evaluation_stats,
                          contributor_rank=contributor_rank,
-                         accuracy_rate=accuracy_rate)
+                         accuracy_rate=accuracy_rate,
+                         eval_mems = EVAL_COUNT,
+                         memes_min = MIN_MEME_COUNT)
 
 @app.route('/gallery')
 def gallery():
@@ -731,7 +737,9 @@ def gallery():
     return render_template('gallery.html', 
                          memes=pagination,
                          per_page=per_page,
-                         current_user=current_user)
+                         current_user=current_user,
+                         eval_mems = EVAL_COUNT,
+                         memes_min = MIN_MEME_COUNT)
 
 @app.route('/evaluate')
 def evaluate():
@@ -742,12 +750,12 @@ def evaluate():
     evaluation_count = get_user_evaluation_count()
     available_memes = get_available_memes_count()
     
-    if evaluation_count >= 10:
+    if evaluation_count >= MIN_MEME_COUNT:
         flash('You have completed all required evaluations! You can now upload memes.')
         return redirect(url_for('upload_file'))
     
-    if available_memes < 10:
-        flash(f'Only {available_memes} memes available for evaluation. You can upload without completing 10 evaluations!')
+    if available_memes < MIN_MEME_COUNT:
+        flash(f'Only {available_memes} memes available for evaluation. You can upload without completing {EVAL_COUNT} evaluations!')
         return redirect(url_for('upload_file'))
     
     meme = get_random_meme_for_evaluation()
@@ -769,11 +777,13 @@ def evaluate():
                          meme=meme, 
                          descriptions=descriptions,
                          evaluation_count=evaluation_count,
-                         current_user=current_user)
+                         current_user=current_user,
+                         eval_mems = EVAL_COUNT,
+                         memes_min = MIN_MEME_COUNT)
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
-    """Enhanced upload with comprehensive meme classification"""
+    """Simplified upload with conditional user info"""
     current_user = get_current_user()
     session_id = get_or_create_session()
     
@@ -781,7 +791,7 @@ def upload_file():
     available_memes = get_available_memes_count()
     
     if not can_user_upload():
-        remaining_evaluations = 10 - evaluation_count
+        remaining_evaluations = EVAL_COUNT - evaluation_count
         flash(f'You need to complete {remaining_evaluations} more evaluations before you can upload.')
         return redirect(url_for('evaluate'))
     
@@ -795,15 +805,18 @@ def upload_file():
         
         # Validate file
         if file.filename == '' or not (file and allowed_file(file.filename)):
-            flash('Please select a valid image file (PNG, JPG, JPEG, or GIF).')
+            flash('Please select a valid image file (PNG, JPG, JPEG, or WebP).')
             return redirect(request.url)
         
-        # Extract all form data
+        # Extract form data
         form_data = {
-            # Contributor Information
-            'contributor_name': request.form.get('contributor_name', '').strip(),
-            'contributor_email': request.form.get('contributor_email', '').strip(),
-            'country_of_submission': request.form.get('country_of_submission', '').strip(),
+            # Contributor Information (only if not logged in)
+            'contributor_name': request.form.get('contributor_name', '').strip() if not current_user else '',
+            'contributor_email': request.form.get('contributor_email', '').strip() if not current_user else '',
+            'contributor_country': request.form.get('contributor_country', '').strip() if not current_user else '',
+            
+            # Meme Information
+            'meme_origin_country': request.form.get('meme_origin_country', '').strip(),
             'platform_found': request.form.get('platform_found', '').strip(),
             
             # Content Classification
@@ -823,12 +836,8 @@ def upload_file():
             'context_required': request.form.get('context_required', '').strip(),
             'age_group_target': request.form.get('age_group_target', '').strip(),
             
-            # AI Training Descriptions
-            'description_1': request.form.get('description_1', '').strip(),
-            'description_2': request.form.get('description_2', '').strip(),
-            'description_3': request.form.get('description_3', '').strip(),
-            'description_4': request.form.get('description_4', '').strip(),
-            'correct_description': request.form.get('correct_description', ''),
+            # Meme Description (single description instead of 4)
+            'meme_description': request.form.get('meme_description', '').strip(),
             
             # Additional Data
             'additional_notes': request.form.get('additional_notes', '').strip(),
@@ -837,10 +846,14 @@ def upload_file():
         
         # Validate required fields
         required_fields = [
-            'country_of_submission', 'platform_found', 'meme_content', 'estimated_year',
+            'platform_found', 'meme_content', 'estimated_year',
             'cultural_reach', 'humor_explanation', 'humor_type', 'context_required',
-            'description_1', 'description_2', 'description_3', 'description_4', 'correct_description'
+            'meme_description'
         ]
+        
+        # Add contributor country as required if not logged in
+        if not current_user:
+            required_fields.append('contributor_country')
         
         missing_fields = [field for field in required_fields if not form_data[field]]
         
@@ -851,15 +864,6 @@ def upload_file():
         # Validate emotions (at least one must be selected)
         if not form_data['emotions']:
             flash('Please select at least one emotion that the meme conveys.')
-            return redirect(request.url)
-        
-        # Validate correct_description is between 1-4
-        try:
-            correct_desc = int(form_data['correct_description'])
-            if correct_desc not in [1, 2, 3, 4]:
-                raise ValueError()
-        except (ValueError, TypeError):
-            flash('Please indicate which description is correct (1-4).')
             return redirect(request.url)
         
         # Validate terms agreement
@@ -885,55 +889,73 @@ def upload_file():
         if current_user:
             contributor_name = current_user['name']
             contributor_email = current_user['email']
+            contributor_country = current_user['country']
             uploader_user_id = current_user['id']
         else:
             contributor_name = form_data['contributor_name']
             contributor_email = form_data['contributor_email']
+            contributor_country = form_data['contributor_country']
             uploader_user_id = None
         
-        # Save to database
+        # Save to database with new fields
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        cursor.execute('''
-            INSERT INTO memes (
-                filename, original_filename, contributor_name, contributor_email,
-                country_of_submission, platform_found, uploader_session, uploader_user_id,
-                meme_content, meme_template, estimated_year, cultural_reach, niche_community,
-                humor_explanation, humor_type, emotions_conveyed,
-                cultural_references, context_required, age_group_target,
-                description_1, description_2, description_3, description_4, correct_description,
-                additional_notes, terms_agreement
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            unique_filename, original_filename, contributor_name, contributor_email,
-            form_data['country_of_submission'], form_data['platform_found'], session_id, uploader_user_id,
-            form_data['meme_content'], form_data['meme_template'], form_data['estimated_year'], 
-            form_data['cultural_reach'], form_data['niche_community'],
-            form_data['humor_explanation'], form_data['humor_type'], emotions_json,
-            form_data['cultural_references'], form_data['context_required'], form_data['age_group_target'],
-            form_data['description_1'], form_data['description_2'], form_data['description_3'], 
-            form_data['description_4'], correct_desc,
-            form_data['additional_notes'], form_data['terms_agreement']
-        ))
-        
-        meme_id = cursor.lastrowid
-        
-        # Update user stats if logged in
-        if current_user:
+        try:
             cursor.execute('''
-                UPDATE users 
-                SET total_submissions = total_submissions + 1
-                WHERE id = ?
-            ''', (current_user['id'],))
+                INSERT INTO memes (
+                    filename, original_filename, contributor_name, contributor_email,
+                    contributor_country, meme_origin_country, platform_found, 
+                    uploader_session, uploader_user_id,
+                    meme_content, meme_template, estimated_year, cultural_reach, niche_community,
+                    humor_explanation, humor_type, emotions_conveyed,
+                    cultural_references, context_required, age_group_target,
+                    meme_description, additional_notes, terms_agreement
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                unique_filename, original_filename, contributor_name, contributor_email,
+                contributor_country, form_data['meme_origin_country'], form_data['platform_found'], 
+                session_id, uploader_user_id,
+                form_data['meme_content'], form_data['meme_template'], form_data['estimated_year'], 
+                form_data['cultural_reach'], form_data['niche_community'],
+                form_data['humor_explanation'], form_data['humor_type'], emotions_json,
+                form_data['cultural_references'], form_data['context_required'], form_data['age_group_target'],
+                form_data['meme_description'], form_data['additional_notes'], form_data['terms_agreement']
+            ))
+            
+            meme_id = cursor.lastrowid
+            
+            # Update user stats if logged in
+            if current_user:
+                cursor.execute('''
+                    UPDATE users 
+                    SET total_submissions = total_submissions + 1
+                    WHERE id = ?
+                ''', (current_user['id'],))
+            
+            conn.commit()
+            flash('Meme uploaded and classified successfully! Thank you for your detailed contribution to our research.')
+            
+        except sqlite3.OperationalError as e:
+            # Handle case where new columns don't exist yet
+            if "no such column" in str(e):
+                flash('Database needs to be updated. Please run the migration script first.')
+                print(f"Database migration needed: {e}")
+            else:
+                flash('Error saving meme. Please try again.')
+                print(f"Database error: {e}")
+            conn.rollback()
+            return redirect(request.url)
+            
+        finally:
+            conn.close()
         
-        conn.commit()
-        conn.close()
-        
-        flash('Meme uploaded and classified successfully! Thank you for your detailed contribution to our research.')
         return redirect(url_for('gallery'))
     
-    return render_template('upload_enhanced.html', current_user=current_user)
+    return render_template('upload_simplified.html',
+                           current_user=current_user,
+                           eval_mems = EVAL_COUNT,
+                           memes_min = MIN_MEME_COUNT)
 
 @app.route('/submit_evaluation', methods=['POST'])
 def submit_evaluation():
@@ -1001,8 +1023,8 @@ def submit_evaluation():
     else:
         flash(f'❌ Not quite right, but thanks for participating! Progress: {evaluation_count}/10')
     
-    if evaluation_count >= 10:
-        flash('🎉 Congratulations! You have completed all 10 evaluations. You can now upload your own meme!')
+    if evaluation_count >= EVAL_COUNT:
+        flash(f'🎉 Congratulations! You have completed all {EVAL_COUNT} evaluations. You can now upload your own meme!')
         return redirect(url_for('upload_file'))
     else:
         return redirect(url_for('evaluate'))
@@ -1026,11 +1048,13 @@ def stats():
                          total_evaluations=total_evaluations,
                          unique_evaluators=unique_evaluators,
                          registered_users=registered_users,
-                         current_user=current_user)
+                         current_user=current_user,
+                         eval_mems = EVAL_COUNT,
+                         memes_min = MIN_MEME_COUNT)
 @app.route('/analytics')
 def analytics():
     """Research analytics dashboard with proper None handling"""
-    current_user = get_current_user_safe() if 'get_current_user_safe' in globals() else get_current_user()
+    current_user = get_current_user()
     
     conn = get_db_connection()
     
@@ -1191,7 +1215,9 @@ def analytics():
                          cultural_stats=cultural_stats,
                          difficult_memes=difficult_memes,
                          easy_memes=easy_memes,
-                         current_user=current_user)
+                         current_user=current_user,
+                         eval_mems = EVAL_COUNT,
+                         memes_min = MIN_MEME_COUNT)
 
 @app.route('/export_data')
 def export_data():
@@ -1350,22 +1376,30 @@ def get_random_meme_for_evaluation():
 @app.errorhandler(404)
 def not_found_error(error):
     """Handle 404 errors - Page not found"""
-    return render_template('404.html'), 404
+    return render_template('404.html',
+                           eval_mems = EVAL_COUNT,
+                         memes_min = MIN_MEME_COUNT), 404
 
 @app.errorhandler(500)
 def internal_error(error):
     """Handle 500 errors - Internal server error"""
-    return render_template('500.html'), 500
+    return render_template('500.html',
+                           eval_mems = EVAL_COUNT,
+                         memes_min = MIN_MEME_COUNT), 500
 
 @app.errorhandler(403)
 def forbidden_error(error):
     """Handle 403 errors - Forbidden access"""
-    return render_template('403.html'), 403
+    return render_template('403.html',
+                           eval_mems = EVAL_COUNT,
+                         memes_min = MIN_MEME_COUNT), 403
 
 @app.errorhandler(413)
 def too_large_error(error):
     """Handle 413 errors - File too large"""
-    return render_template('413.html'), 413
+    return render_template('413.html',
+                           eval_mems = EVAL_COUNT,
+                         memes_min = MIN_MEME_COUNT), 413
 
 # Template context processor to make current_user available in all templates
 @app.context_processor
