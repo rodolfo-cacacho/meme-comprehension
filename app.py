@@ -38,6 +38,36 @@ EVAL_COUNT = 5  # Number of evaluations required to upload memes
 # Create uploads directory if it doesn't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+def add_evaluation_fields():
+    """Add new fields for humor/emotion evaluation"""
+    conn = sqlite3.connect('memes.db')
+    cursor = conn.cursor()
+    
+    try:
+        # Add new columns for humor/emotion evaluation
+        new_eval_columns = [
+            ('evaluated_humor_type', 'TEXT'),
+            ('evaluated_emotions', 'TEXT'),  # JSON array
+            ('evaluated_context_level', 'TEXT'),
+            ('matches_humor_type', 'BOOLEAN'),
+            ('emotion_overlap_score', 'REAL')  # 0.0-1.0 based on overlap
+        ]
+        
+        for column_name, column_type in new_eval_columns:
+            try:
+                cursor.execute(f"ALTER TABLE evaluations ADD COLUMN {column_name} {column_type}")
+                print(f"Added evaluation column: {column_name}")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+        
+        conn.commit()
+        
+    except Exception as e:
+        print(f"Error adding evaluation fields: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -106,6 +136,11 @@ def init_db():
             confidence_level INTEGER DEFAULT 3, -- 1-4 confidence rating
             evaluation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             evaluation_time_seconds INTEGER, -- Time spent on evaluation
+            evaluated_humor_type TEXT, -- Humor type evaluated by user
+            evaluated_emotions, 'TEXT',  -- JSON array
+            evaluated_context_level, 'TEXT',
+            matches_humor_type, 'BOOLEAN',
+            emotion_overlap_score, 'REAL', -- 0.0-1.0 based on overlap
             FOREIGN KEY (meme_id) REFERENCES memes (id),
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
@@ -648,9 +683,10 @@ def create_login_sent_template():
 </div>
 {% endblock %}'''
 
+# Updated profile route for app.py
 @app.route('/profile')
 def profile():
-    """User profile page"""
+    """User profile page with safe data handling"""
     current_user = get_current_user()
     if not current_user:
         flash('Please register or log in to view your profile.')
@@ -658,32 +694,80 @@ def profile():
     
     conn = get_db_connection()
     
-    # Get user's recent memes with analytics
-    recent_memes = conn.execute('''
-        SELECT m.*, a.accuracy_rate, a.total_evaluations
-        FROM memes m
-        LEFT JOIN meme_analytics a ON m.id = a.meme_id
-        WHERE m.uploader_user_id = ?
-        ORDER BY m.upload_date DESC
-        LIMIT 10
-    ''', (current_user['id'],)).fetchall()
-    
-    # Get evaluation statistics
-    evaluation_stats = conn.execute('''
-        SELECT 
-            COUNT(*) as total_evaluations,
-            COUNT(CASE WHEN was_correct THEN 1 END) as correct_evaluations,
-            AVG(CASE WHEN was_correct THEN 1.0 ELSE 0.0 END) as accuracy,
-            AVG(evaluation_time_seconds) as avg_time
-        FROM evaluations 
-        WHERE user_id = ?
-    ''', (current_user['id'],)).fetchone()
-    
-    conn.close()
-    
-    # Calculate user rank (simplified)
-    contributor_rank = "Top 10%" if current_user['total_submissions'] > 5 else "Active"
-    accuracy_rate = int(evaluation_stats['accuracy'] * 100) if evaluation_stats['accuracy'] else 0
+    try:
+        # Get user's recent memes with analytics
+        recent_memes = conn.execute('''
+            SELECT m.*, 
+                   COALESCE(a.accuracy_rate, 0.0) as accuracy_rate, 
+                   COALESCE(a.total_evaluations, 0) as total_evaluations
+            FROM memes m
+            LEFT JOIN meme_analytics a ON m.id = a.meme_id
+            WHERE m.uploader_user_id = ?
+            ORDER BY m.upload_date DESC
+            LIMIT 10
+        ''', (current_user['id'],)).fetchall()
+        
+        # Get evaluation statistics with safe defaults
+        evaluation_stats_raw = conn.execute('''
+            SELECT 
+                COUNT(*) as total_evaluations,
+                COUNT(CASE WHEN was_correct = 1 THEN 1 END) as correct_evaluations,
+                AVG(CASE WHEN was_correct = 1 THEN 1.0 ELSE 0.0 END) as accuracy,
+                AVG(evaluation_time_seconds) as avg_time
+            FROM evaluations 
+            WHERE user_id = ?
+        ''', (current_user['id'],)).fetchone()
+        
+        # Create safe evaluation stats with defaults
+        evaluation_stats = {
+            'total_evaluations': evaluation_stats_raw['total_evaluations'] if evaluation_stats_raw else 0,
+            'correct_evaluations': evaluation_stats_raw['correct_evaluations'] if evaluation_stats_raw else 0,
+            'accuracy': evaluation_stats_raw['accuracy'] if evaluation_stats_raw and evaluation_stats_raw['accuracy'] else 0.0,
+            'avg_time': evaluation_stats_raw['avg_time'] if evaluation_stats_raw and evaluation_stats_raw['avg_time'] else 0.0
+        }
+        
+        # Get user's contribution rank (simplified)
+        total_users = conn.execute('SELECT COUNT(*) as count FROM users WHERE total_submissions > 0').fetchone()
+        user_rank_query = conn.execute('''
+            SELECT COUNT(*) as rank FROM users 
+            WHERE total_submissions > ? AND id != ?
+        ''', (current_user['total_submissions'] or 0, current_user['id'])).fetchone()
+        
+        user_rank = (user_rank_query['rank'] + 1) if user_rank_query else 1
+        total_contributors = total_users['count'] if total_users else 1
+        
+        # Calculate rank percentage
+        if total_contributors > 0:
+            rank_percentile = (user_rank / total_contributors) * 100
+            if rank_percentile <= 10:
+                contributor_rank = "Top 10%"
+            elif rank_percentile <= 25:
+                contributor_rank = "Top 25%"
+            elif rank_percentile <= 50:
+                contributor_rank = "Top Half"
+            else:
+                contributor_rank = "Contributing Member"
+        else:
+            contributor_rank = "Pioneer"
+        
+        # Calculate accuracy rate for display
+        accuracy_rate = int(evaluation_stats['accuracy'] * 100) if evaluation_stats['accuracy'] else 0
+        
+    except Exception as e:
+        print(f"Error in profile route: {e}")
+        # Fallback to safe defaults
+        recent_memes = []
+        evaluation_stats = {
+            'total_evaluations': 0,
+            'correct_evaluations': 0,
+            'accuracy': 0.0,
+            'avg_time': 0.0
+        }
+        contributor_rank = "Member"
+        accuracy_rate = 0
+        
+    finally:
+        conn.close()
     
     return render_template('profile.html',
                          contributor=current_user,
@@ -691,8 +775,8 @@ def profile():
                          evaluation_stats=evaluation_stats,
                          contributor_rank=contributor_rank,
                          accuracy_rate=accuracy_rate,
-                         eval_mems = EVAL_COUNT,
-                         memes_min = MIN_MEME_COUNT)
+                         eval_mems=EVAL_COUNT,
+                         memes_min=MIN_MEME_COUNT)
 
 @app.route('/gallery')
 def gallery():
@@ -740,22 +824,52 @@ def gallery():
                          current_user=current_user,
                          eval_mems = EVAL_COUNT,
                          memes_min = MIN_MEME_COUNT)
+# Updated evaluation table schema - add this to your migration
+def add_evaluation_fields():
+    """Add new fields for humor/emotion evaluation"""
+    conn = sqlite3.connect('memes.db')
+    cursor = conn.cursor()
+    
+    try:
+        # Add new columns for humor/emotion evaluation
+        new_eval_columns = [
+            ('evaluated_humor_type', 'TEXT'),
+            ('evaluated_emotions', 'TEXT'),  # JSON array
+            ('evaluated_context_level', 'TEXT'),
+            ('matches_humor_type', 'BOOLEAN'),
+            ('emotion_overlap_score', 'REAL')  # 0.0-1.0 based on overlap
+        ]
+        
+        for column_name, column_type in new_eval_columns:
+            try:
+                cursor.execute(f"ALTER TABLE evaluations ADD COLUMN {column_name} {column_type}")
+                print(f"Added evaluation column: {column_name}")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+        
+        conn.commit()
+        
+    except Exception as e:
+        print(f"Error adding evaluation fields: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
 
 @app.route('/evaluate')
 def evaluate():
-    """Show meme evaluation page"""
+    """Show humor/emotion evaluation page"""
     current_user = get_current_user()
     session_id = get_or_create_session()
     
     evaluation_count = get_user_evaluation_count()
     available_memes = get_available_memes_count()
     
-    if evaluation_count >= MIN_MEME_COUNT:
+    if evaluation_count >= EVAL_COUNT:
         flash('You have completed all required evaluations! You can now upload memes.')
         return redirect(url_for('upload_file'))
     
     if available_memes < MIN_MEME_COUNT:
-        flash(f'Only {available_memes} memes available for evaluation. You can upload without completing {EVAL_COUNT} evaluations!')
+        flash(f'Only {available_memes} memes available for evaluation. You can upload without completing 10 evaluations!')
         return redirect(url_for('upload_file'))
     
     meme = get_random_meme_for_evaluation()
@@ -764,22 +878,272 @@ def evaluate():
         flash('No more memes available for evaluation. You can now upload your own!')
         return redirect(url_for('upload_file'))
     
-    # Randomize the order of descriptions for fair evaluation
-    descriptions = [
-        (1, meme['description_1']),
-        (2, meme['description_2']),
-        (3, meme['description_3']),
-        (4, meme['description_4'])
-    ]
-    random.shuffle(descriptions)
-    
     return render_template('evaluate_enhanced.html', 
                          meme=meme, 
-                         descriptions=descriptions,
                          evaluation_count=evaluation_count,
                          current_user=current_user,
                          eval_mems = EVAL_COUNT,
-                         memes_min = MIN_MEME_COUNT)
+                         memes_min=MIN_MEME_COUNT)
+
+@app.route('/submit_humor_emotion_evaluation', methods=['POST'])
+def submit_humor_emotion_evaluation():
+    """Submit humor and emotion evaluation"""
+    current_user = get_current_user()
+    session_id = get_or_create_session()
+    
+    meme_id = request.form.get('meme_id')
+    evaluated_humor_type = request.form.get('humor_type')
+    evaluated_emotions = request.form.getlist('emotions')
+    evaluated_context_level = request.form.get('context_level', '')
+    evaluation_time = request.form.get('evaluation_time', 0, type=int)
+    confidence_level = request.form.get('confidence_level', 3, type=int)
+    
+    if not meme_id or not evaluated_humor_type or not evaluated_emotions:
+        flash('Please complete all required fields.')
+        return redirect(url_for('evaluate'))
+    
+    # Get the meme to compare against
+    conn = get_db_connection()
+    meme = conn.execute('''
+        SELECT humor_type, emotions_conveyed 
+        FROM memes 
+        WHERE id = ?
+    ''', (meme_id,)).fetchone()
+    
+    if not meme:
+        flash('Meme not found.')
+        return redirect(url_for('evaluate'))
+    
+    # Calculate correctness scores
+    try:
+        # Check humor type match
+        original_humor_type = meme['humor_type']
+        matches_humor_type = (evaluated_humor_type == original_humor_type) if original_humor_type else None
+        
+        # Calculate emotion overlap
+        if meme['emotions_conveyed']:
+            try:
+                original_emotions = json.loads(meme['emotions_conveyed'])
+                if isinstance(original_emotions, list) and len(original_emotions) > 0:
+                    # Calculate overlap score (intersection / union)
+                    evaluated_set = set(evaluated_emotions)
+                    original_set = set(original_emotions)
+                    
+                    if len(original_set) > 0:
+                        intersection = len(evaluated_set.intersection(original_set))
+                        union = len(evaluated_set.union(original_set))
+                        emotion_overlap_score = intersection / union if union > 0 else 0.0
+                    else:
+                        emotion_overlap_score = 0.0
+                else:
+                    emotion_overlap_score = 0.0
+            except (json.JSONDecodeError, TypeError):
+                emotion_overlap_score = 0.0
+        else:
+            emotion_overlap_score = 0.0
+        
+        # Convert emotions to JSON
+        emotions_json = json.dumps(evaluated_emotions)
+        
+        # Save evaluation
+        conn.execute('''
+            INSERT INTO evaluations 
+            (session_id, user_id, meme_id, chosen_description, 
+             evaluated_humor_type, evaluated_emotions, evaluated_context_level,
+             matches_humor_type, emotion_overlap_score,
+             confidence_level, evaluation_time_seconds) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            session_id, 
+            current_user['id'] if current_user else None, 
+            meme_id, 
+            1,  # Default value for chosen_description (legacy field)
+            evaluated_humor_type,
+            emotions_json,
+            evaluated_context_level,
+            matches_humor_type,
+            emotion_overlap_score,
+            confidence_level, 
+            evaluation_time
+        ))
+        
+        # Update user stats if logged in
+        if current_user:
+            # Calculate new accuracy based on humor and emotion scores
+            user_evals = conn.execute('''
+                SELECT 
+                    COUNT(*) as total,
+                    AVG(CASE WHEN matches_humor_type THEN 1.0 ELSE 0.0 END) as humor_accuracy,
+                    AVG(emotion_overlap_score) as emotion_accuracy
+                FROM evaluations 
+                WHERE user_id = ? AND matches_humor_type IS NOT NULL
+            ''', (current_user['id'],)).fetchone()
+            
+            if user_evals['total'] > 0:
+                # Combined accuracy: 50% humor accuracy + 50% emotion accuracy
+                combined_accuracy = (
+                    (user_evals['humor_accuracy'] or 0) * 0.5 + 
+                    (user_evals['emotion_accuracy'] or 0) * 0.5
+                )
+                
+                conn.execute('''
+                    UPDATE users 
+                    SET total_evaluations = ?, evaluation_accuracy = ?
+                    WHERE id = ?
+                ''', (user_evals['total'], combined_accuracy, current_user['id']))
+        
+        conn.commit()
+        
+        evaluation_count = get_user_evaluation_count()
+        
+        # Provide feedback
+        feedback_parts = []
+        
+        if matches_humor_type is not None:
+            if matches_humor_type:
+                feedback_parts.append("✅ Humor type correct!")
+            else:
+                feedback_parts.append(f"📝 Humor: You said '{evaluated_humor_type}', original was '{original_humor_type}'")
+        
+        if emotion_overlap_score > 0:
+            if emotion_overlap_score >= 0.7:
+                feedback_parts.append("✅ Great emotion match!")
+            elif emotion_overlap_score >= 0.3:
+                feedback_parts.append("📝 Good emotion overlap!")
+            else:
+                feedback_parts.append("📝 Some emotion differences noted")
+        
+        feedback = " | ".join(feedback_parts) if feedback_parts else "Thanks for your evaluation!"
+        flash(f'{feedback} Progress: {evaluation_count}/{EVAL_COUNT} evaluations completed.')
+        
+    except Exception as e:
+        print(f"Error processing evaluation: {e}")
+        flash('Error processing evaluation. Please try again.')
+        conn.rollback()
+    finally:
+        conn.close()
+    
+    evaluation_count = get_user_evaluation_count()
+    
+    if evaluation_count >= 10:
+        flash('🎉 Congratulations! You have completed all 10 evaluations. You can now upload your own meme!')
+        return redirect(url_for('upload_file'))
+    else:
+        return redirect(url_for('evaluate'))
+
+# Updated analytics for humor/emotion evaluation
+@app.route('/evaluation_analytics')
+def evaluation_analytics():
+    """Analytics for humor/emotion evaluation performance"""
+    if not DEVELOPMENT:
+        abort(403)
+    
+    conn = get_db_connection()
+    
+    try:
+        # Humor type accuracy
+        humor_stats = conn.execute('''
+            SELECT 
+                evaluated_humor_type,
+                COUNT(*) as total_evaluations,
+                AVG(CASE WHEN matches_humor_type THEN 1.0 ELSE 0.0 END) as accuracy
+            FROM evaluations 
+            WHERE evaluated_humor_type IS NOT NULL AND matches_humor_type IS NOT NULL
+            GROUP BY evaluated_humor_type
+            ORDER BY total_evaluations DESC
+        ''').fetchall()
+        
+        # Emotion overlap statistics
+        emotion_stats = conn.execute('''
+            SELECT 
+                AVG(emotion_overlap_score) as avg_overlap,
+                MIN(emotion_overlap_score) as min_overlap,
+                MAX(emotion_overlap_score) as max_overlap,
+                COUNT(*) as total_evaluations
+            FROM evaluations 
+            WHERE emotion_overlap_score IS NOT NULL
+        ''').fetchone()
+        
+        # Most confused memes (low accuracy)
+        difficult_memes = conn.execute('''
+            SELECT 
+                m.id, m.original_filename, m.humor_type, m.emotions_conveyed,
+                AVG(CASE WHEN e.matches_humor_type THEN 1.0 ELSE 0.0 END) as humor_accuracy,
+                AVG(e.emotion_overlap_score) as emotion_accuracy,
+                COUNT(*) as evaluation_count
+            FROM memes m
+            JOIN evaluations e ON m.id = e.meme_id
+            WHERE e.matches_humor_type IS NOT NULL
+            GROUP BY m.id
+            HAVING COUNT(*) >= 3
+            ORDER BY (humor_accuracy + emotion_accuracy) ASC
+            LIMIT 10
+        ''').fetchall()
+        
+        # Best performing memes (high accuracy)
+        easy_memes = conn.execute('''
+            SELECT 
+                m.id, m.original_filename, m.humor_type, m.emotions_conveyed,
+                AVG(CASE WHEN e.matches_humor_type THEN 1.0 ELSE 0.0 END) as humor_accuracy,
+                AVG(e.emotion_overlap_score) as emotion_accuracy,
+                COUNT(*) as evaluation_count
+            FROM memes m
+            JOIN evaluations e ON m.id = e.meme_id
+            WHERE e.matches_humor_type IS NOT NULL
+            GROUP BY m.id
+            HAVING COUNT(*) >= 3
+            ORDER BY (humor_accuracy + emotion_accuracy) DESC
+            LIMIT 10
+        ''').fetchall()
+        
+    except Exception as e:
+        print(f"Error in evaluation analytics: {e}")
+        humor_stats = []
+        emotion_stats = None
+        difficult_memes = []
+        easy_memes = []
+    finally:
+        conn.close()
+    
+    return render_template('evaluation_analytics.html',
+                         humor_stats=humor_stats,
+                         emotion_stats=emotion_stats,
+                         difficult_memes=difficult_memes,
+                         easy_memes=easy_memes)
+
+# Helper function to get random meme that needs evaluation
+def get_random_meme_for_evaluation():
+    """Get a random meme that the user hasn't evaluated yet"""
+    current_user = get_current_user()
+    session_id = get_or_create_session()
+    
+    conn = get_db_connection()
+    
+    # Get memes that have the required fields and user hasn't evaluated
+    if current_user:
+        meme = conn.execute('''
+            SELECT * FROM memes 
+            WHERE humor_type IS NOT NULL 
+            AND emotions_conveyed IS NOT NULL 
+            AND id NOT IN (
+                SELECT meme_id FROM evaluations WHERE user_id = ?
+            ) 
+            ORDER BY RANDOM() LIMIT 1
+        ''', (current_user['id'],)).fetchone()
+    else:
+        meme = conn.execute('''
+            SELECT * FROM memes 
+            WHERE humor_type IS NOT NULL 
+            AND emotions_conveyed IS NOT NULL 
+            AND id NOT IN (
+                SELECT meme_id FROM evaluations 
+                WHERE session_id = ? AND (user_id IS NULL OR user_id = "")
+            ) 
+            ORDER BY RANDOM() LIMIT 1
+        ''', (session_id,)).fetchone()
+    
+    conn.close()
+    return meme
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
@@ -1051,6 +1415,7 @@ def stats():
                          current_user=current_user,
                          eval_mems = EVAL_COUNT,
                          memes_min = MIN_MEME_COUNT)
+
 @app.route('/analytics')
 def analytics():
     """Research analytics dashboard with proper None handling"""
@@ -1345,32 +1710,7 @@ def can_user_upload():
     """Check if user can upload"""
     evaluation_count = get_user_evaluation_count()
     available_memes = get_available_memes_count()
-    return evaluation_count >= 10 or available_memes < 10
-
-def get_random_meme_for_evaluation():
-    """Get a random meme that the user hasn't evaluated yet"""
-    current_user = get_current_user()
-    session_id = get_or_create_session()
-    
-    conn = get_db_connection()
-    
-    if current_user:
-        meme = conn.execute('''
-            SELECT * FROM memes 
-            WHERE id NOT IN (
-                SELECT meme_id FROM evaluations WHERE user_id = ?
-            ) ORDER BY RANDOM() LIMIT 1
-        ''', (current_user['id'],)).fetchone()
-    else:
-        meme = conn.execute('''
-            SELECT * FROM memes 
-            WHERE id NOT IN (
-                SELECT meme_id FROM evaluations WHERE session_id = ? AND user_id IS NULL
-            ) ORDER BY RANDOM() LIMIT 1
-        ''', (session_id,)).fetchone()
-    
-    conn.close()
-    return meme
+    return evaluation_count >= EVAL_COUNT or available_memes < MIN_MEME_COUNT
 
 # Error handlers
 @app.errorhandler(404)

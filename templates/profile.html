@@ -1,4 +1,4 @@
-<!-- templates/profile.html -->
+<!-- templates/profile.html - Updated with safe data handling -->
 {% extends "base.html" %}
 
 {% block title %}Your Profile - MemeQA{% endblock %}
@@ -30,18 +30,18 @@
                     <div class="card-body">
                         <div class="text-center mb-3">
                             <div class="user-avatar bg-primary text-white mx-auto" style="width: 80px; height: 80px; font-size: 2em;">
-                                {{ contributor.name[:1].upper() }}
+                                {{ contributor.name[:1].upper() if contributor.name else 'U' }}
                             </div>
                         </div>
                         
                         <div class="mb-2">
-                            <strong><i class="bi bi-person"></i> Name:</strong> {{ contributor.name }}
+                            <strong><i class="bi bi-person"></i> Name:</strong> {{ contributor.name or 'Unknown' }}
                         </div>
                         <div class="mb-2">
-                            <strong><i class="bi bi-envelope"></i> Email:</strong> {{ contributor.email }}
+                            <strong><i class="bi bi-envelope"></i> Email:</strong> {{ contributor.email or 'Not provided' }}
                         </div>
                         <div class="mb-2">
-                            <strong><i class="bi bi-geo-alt"></i> Country:</strong> {{ contributor.country }}
+                            <strong><i class="bi bi-geo-alt"></i> Country:</strong> {{ contributor.country or 'Not specified' }}
                         </div>
                         {% if contributor.affiliation %}
                         <div class="mb-2">
@@ -91,8 +91,8 @@
                         <div class="card shadow-sm text-center h-100 border-info">
                             <div class="card-body">
                                 <div class="display-4 text-info mb-2">
-                                    {% if contributor.evaluation_accuracy %}
-                                        {{ "%.0f"|format(contributor.evaluation_accuracy * 100) }}%
+                                    {% if accuracy_rate is defined and accuracy_rate > 0 %}
+                                        {{ accuracy_rate }}%
                                     {% else %}
                                         N/A
                                     {% endif %}
@@ -106,18 +106,19 @@
                         <div class="card shadow-sm text-center h-100 border-warning">
                             <div class="card-body">
                                 <div class="display-4 text-warning mb-2">
-                                    {% if contributor.total_submissions >= 10 %}
+                                    {% set total_submissions = contributor.total_submissions or 0 %}
+                                    {% if total_submissions >= 10 %}
                                         🏆 Expert
-                                    {% elif contributor.total_submissions >= 5 %}
+                                    {% elif total_submissions >= 5 %}
                                         🥈 Active
-                                    {% elif contributor.total_submissions >= 1 %}
+                                    {% elif total_submissions >= 1 %}
                                         🥉 Contributor
                                     {% else %}
                                         🌟 New
                                     {% endif %}
                                 </div>
                                 <h5 class="card-title">Status</h5>
-                                <p class="card-text small text-muted">Your contribution level</p>
+                                <p class="card-text small text-muted">{{ contributor_rank or 'Member' }}</p>
                             </div>
                         </div>
                     </div>
@@ -134,17 +135,21 @@
             </div>
             <div class="card-body">
                 <div class="row text-center">
-                    {% if contributor.total_evaluations >= 10 %}
+                    {% set total_evals = contributor.total_evaluations or 0 %}
+                    {% set total_subs = contributor.total_submissions or 0 %}
+                    {% set user_accuracy = contributor.evaluation_accuracy or 0 %}
+                    
+                    {% if total_evals >= eval_mems %}
                     <div class="col-md-3 mb-3">
                         <div class="achievement-badge bg-success text-white mx-auto mb-2">
                             <i class="bi bi-check-circle"></i>
                         </div>
                         <h6>Evaluator</h6>
-                        <small class="text-muted">Completed 10+ evaluations</small>
+                        <small class="text-muted">Completed {{ eval_mems }}+ evaluations</small>
                     </div>
                     {% endif %}
                     
-                    {% if contributor.total_submissions >= 1 %}
+                    {% if total_subs >= 1 %}
                     <div class="col-md-3 mb-3">
                         <div class="achievement-badge bg-primary text-white mx-auto mb-2">
                             <i class="bi bi-upload"></i>
@@ -154,7 +159,7 @@
                     </div>
                     {% endif %}
                     
-                    {% if contributor.evaluation_accuracy and contributor.evaluation_accuracy >= 0.8 %}
+                    {% if user_accuracy >= 0.8 and total_evals >= 5 %}
                     <div class="col-md-3 mb-3">
                         <div class="achievement-badge bg-info text-white mx-auto mb-2">
                             <i class="bi bi-bullseye"></i>
@@ -164,7 +169,7 @@
                     </div>
                     {% endif %}
                     
-                    {% if contributor.total_submissions >= 5 %}
+                    {% if total_subs >= 5 %}
                     <div class="col-md-3 mb-3">
                         <div class="achievement-badge bg-secondary text-white mx-auto mb-2">
                             <i class="bi bi-star"></i>
@@ -175,7 +180,7 @@
                     {% endif %}
                 </div>
                 
-                {% if contributor.total_evaluations < 10 and contributor.total_submissions == 0 %}
+                {% if total_evals < eval_mems and total_subs == 0 %}
                 <div class="text-center text-muted">
                     <p>Complete evaluations and upload memes to earn achievements!</p>
                     <a href="{{ url_for('evaluate') }}" class="btn btn-primary btn-sm me-2">
@@ -218,8 +223,9 @@
                                 </td>
                                 <td>
                                     <small>
-                                        {{ meme.meme_content[:50] if meme.meme_content else meme.original_filename[:30] }}
-                                        {% if (meme.meme_content and meme.meme_content|length > 50) or (not meme.meme_content and meme.original_filename|length > 30) %}...{% endif %}
+                                        {% set content = meme.meme_content or meme.original_filename %}
+                                        {{ content[:50] }}
+                                        {% if content|length > 50 %}...{% endif %}
                                     </small>
                                 </td>
                                 <td>
@@ -238,9 +244,10 @@
                                     </span>
                                 </td>
                                 <td class="text-center">
-                                    {% if meme.accuracy_rate is not none and meme.total_evaluations > 0 %}
-                                        <span class="badge {% if meme.accuracy_rate > 0.8 %}bg-success{% elif meme.accuracy_rate > 0.5 %}bg-warning{% else %}bg-danger{% endif %}">
-                                            {{ "%.0f"|format(meme.accuracy_rate * 100) }}%
+                                    {% if meme.accuracy_rate is not none and (meme.total_evaluations or 0) > 0 %}
+                                        {% set acc_pct = (meme.accuracy_rate * 100)|round %}
+                                        <span class="badge {% if acc_pct > 80 %}bg-success{% elif acc_pct > 50 %}bg-warning{% else %}bg-danger{% endif %}">
+                                            {{ acc_pct }}%
                                         </span>
                                     {% else %}
                                         <span class="text-muted">-</span>
@@ -260,12 +267,12 @@
                 <div class="text-center text-muted py-4">
                     <i class="bi bi-upload display-4 text-muted mb-3"></i>
                     <p>You haven't contributed any memes yet.</p>
-                    {% if contributor.total_evaluations >= 10 %}
+                    {% if total_evals >= eval_mems %}
                         <a href="{{ url_for('upload_file') }}" class="btn btn-success">
                             <i class="bi bi-upload"></i> Upload Your First Meme
                         </a>
                     {% else %}
-                        <p class="small">Complete {{ 10 - (contributor.total_evaluations or 0) }} more evaluations to unlock uploads!</p>
+                        <p class="small">Complete {{ eval_mems - total_evals }} more evaluations to unlock uploads!</p>
                         <a href="{{ url_for('evaluate') }}" class="btn btn-primary">
                             <i class="bi bi-play"></i> Continue Evaluating
                         </a>
@@ -291,10 +298,10 @@
                     <div class="col-md-6">
                         <h6>Performance Breakdown</h6>
                         <ul class="list-unstyled">
-                            <li><strong>Total Evaluations:</strong> {{ evaluation_stats.total_evaluations }}</li>
-                            <li><strong>Correct:</strong> {{ evaluation_stats.correct_evaluations }}</li>
-                            <li><strong>Accuracy:</strong> {{ "%.1f"|format(evaluation_stats.accuracy * 100) }}%</li>
-                            {% if evaluation_stats.avg_time %}
+                            <li><strong>Total Evaluations:</strong> {{ evaluation_stats.total_evaluations or 0 }}</li>
+                            <li><strong>Correct:</strong> {{ evaluation_stats.correct_evaluations or 0 }}</li>
+                            <li><strong>Accuracy:</strong> {{ "%.1f"|format((evaluation_stats.accuracy or 0) * 100) }}%</li>
+                            {% if evaluation_stats.avg_time and evaluation_stats.avg_time > 0 %}
                             <li><strong>Avg. Time per Eval:</strong> {{ "%.0f"|format(evaluation_stats.avg_time) }}s</li>
                             {% endif %}
                         </ul>
@@ -302,17 +309,21 @@
                         <!-- Progress towards achievements -->
                         <h6 class="mt-3">Progress</h6>
                         <div class="mb-2">
-                            <small class="text-muted">Evaluations: {{ contributor.total_evaluations or 0 }}/10</small>
+                            <small class="text-muted">Evaluations: {{ total_evals }}/{{ eval_mems }}</small>
                             <div class="progress">
-                                <div class="progress-bar bg-primary" style="width: {{ ((contributor.total_evaluations or 0)/10*100)|round }}%"></div>
+                                {% set progress_calc = (total_evals / eval_mems * 100)|round if eval_mems > 0 else 0 %}
+                                {% set progress_pct = progress_calc if progress_calc <= 100 else 100 %}
+                                <div class="progress-bar bg-primary" style="width: {{ progress_pct }}%"></div>
                             </div>
                         </div>
                         
-                        {% if contributor.evaluation_accuracy %}
+                        {% if user_accuracy > 0 %}
                         <div class="mb-2">
-                            <small class="text-muted">Accuracy: {{ "%.0f"|format(contributor.evaluation_accuracy * 100) }}%/80% (Expert threshold)</small>
+                            <small class="text-muted">Accuracy: {{ "%.0f"|format(user_accuracy * 100) }}%/80% (Expert threshold)</small>
                             <div class="progress">
-                                <div class="progress-bar bg-info" style="width: {{ (contributor.evaluation_accuracy * 100 / 0.8 * 100)|round|min(100) }}%"></div>
+                                {% set acc_calc = (user_accuracy * 100 / 80 * 100)|round %}
+                                {% set acc_progress = acc_calc if acc_calc <= 100 else 100 %}
+                                <div class="progress-bar bg-info" style="width: {{ acc_progress }}%"></div>
                             </div>
                         </div>
                         {% endif %}
@@ -337,7 +348,7 @@
                     <i class="bi bi-check-square"></i> Continue Evaluating
                 </a>
             </div>
-            {% if contributor.total_evaluations >= 10 %}
+            {% if total_evals >= eval_mems %}
             <div class="col-md-4 mb-2">
                 <a href="{{ url_for('upload_file') }}" class="btn btn-outline-success w-100">
                     <i class="bi bi-upload"></i> Upload Meme
@@ -400,7 +411,7 @@ const chart = new Chart(ctx, {
     data: {
         labels: ['Correct', 'Incorrect'],
         datasets: [{
-            data: [{{ evaluation_stats.correct_evaluations }}, {{ evaluation_stats.total_evaluations - evaluation_stats.correct_evaluations }}],
+            data: [{{ evaluation_stats.correct_evaluations or 0 }}, {{ (evaluation_stats.total_evaluations or 0) - (evaluation_stats.correct_evaluations or 0) }}],
             backgroundColor: ['#28a745', '#dc3545'],
             borderWidth: 2
         }]

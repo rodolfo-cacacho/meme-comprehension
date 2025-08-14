@@ -1,7 +1,7 @@
-<!-- templates/evaluate_enhanced.html -->
+<!-- templates/evaluate_humor_emotion.html -->
 {% extends "base.html" %}
 
-{% block title %}Evaluate Meme - MemeQA Enhanced{% endblock %}
+{% block title %}Evaluate Meme - MemeQA{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -9,7 +9,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>🧠 Evaluate Meme</h1>
             <div class="text-end">
-                <span class="badge bg-info fs-6 me-2">Progress: {{ evaluation_count }}/10</span>
+                <span class="badge bg-info fs-6 me-2">Progress: {{ evaluation_count }}/{{eval_mems}}</span>
                 <span class="badge bg-secondary fs-6" id="timer">⏱️ 00:00</span>
             </div>
         </div>
@@ -19,9 +19,9 @@
             <div class="card-body">
                 <h5 class="card-title">📋 Instructions</h5>
                 <p class="card-text mb-0">
-                    <strong>Choose the description that best captures this meme's essence:</strong> 
-                    Consider the humor, cultural context, and what makes this meme relatable or funny. 
-                    There's one correct answer among the four options.
+                    <strong>Help us understand this meme:</strong> 
+                    Look at the meme and identify the type of humor and emotions it conveys. 
+                    Your responses help train AI to understand human humor and emotional context.
                 </p>
             </div>
         </div>
@@ -30,7 +30,14 @@
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">🖼️ Meme #{{ meme.id }}</h5>
-                <small>{{ meme.platform_found }} • {{ meme.estimated_year }}</small>
+                <div class="text-end">
+                    {% if meme.platform_found %}
+                        <small>{{ meme.platform_found }}</small>
+                    {% endif %}
+                    {% if meme.estimated_year %}
+                        <small>• {{ meme.estimated_year }}</small>
+                    {% endif %}
+                </div>
             </div>
             <div class="card-body text-center">
                 <img src="{{ url_for('uploaded_file', filename=meme.filename) }}" 
@@ -40,68 +47,130 @@
             </div>
         </div>
 
-        <!-- Context Information (if available) -->
-        {% if meme.cultural_reach or meme.humor_type %}
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-                <div class="row text-center">
-                    {% if meme.cultural_reach %}
-                    <div class="col-md-4">
-                        <span class="badge bg-secondary">{{ meme.cultural_reach }} Reach</span>
-                    </div>
-                    {% endif %}
-                    {% if meme.humor_type %}
-                    <div class="col-md-4">
-                        <span class="badge bg-warning text-dark">{{ meme.humor_type }}</span>
-                    </div>
-                    {% endif %}
-                    {% if meme.context_required %}
-                    <div class="col-md-4">
-                        <span class="badge bg-info">{{ meme.context_required }} Context</span>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
         <!-- Evaluation Form -->
         <div class="card shadow-sm">
             <div class="card-header bg-warning text-dark">
-                <h4 class="mb-0">🤔 Choose the Best Description</h4>
+                <h4 class="mb-0">🤔 What do you think about this meme?</h4>
             </div>
             <div class="card-body">
-                <form method="post" action="{{ url_for('submit_evaluation') }}" id="evaluationForm">
+                <form method="post" action="{{ url_for('submit_humor_emotion_evaluation') }}" id="evaluationForm">
                     <input type="hidden" name="meme_id" value="{{ meme.id }}">
                     <input type="hidden" name="evaluation_time" id="evaluation_time" value="0">
                     
-                    <div class="row">
-                        {% for desc_num, description in descriptions %}
-                        <div class="col-md-6 mb-4">
-                            <label class="evaluation-card w-100 h-100">
-                                <input type="radio" name="chosen_description" value="{{ desc_num }}" 
-                                       class="d-none" required>
-                                <div class="card h-100 option-card" data-option="{{ loop.index }}">
-                                    <div class="card-header bg-light">
-                                        <h6 class="card-title mb-0">
-                                            <span class="option-letter">{{ ['A', 'B', 'C', 'D'][loop.index0] }}</span>
-                                            Option {{ loop.index }}
-                                        </h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <p class="card-text">{{ description }}</p>
+                    <!-- Humor Type Evaluation -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">😄 What type of humor is this?</h5>
+                            <p class="card-text small text-muted mb-3">Select the humor type that best describes this meme:</p>
+                            
+                            <div class="row">
+                                {% set humor_types = [
+                                    ('Irony/Sarcasm', 'When something means the opposite of what it says'),
+                                    ('Relatability', 'Something most people can relate to or have experienced'),
+                                    ('Absurd/Random', 'Random, nonsensical, or surreal humor'),
+                                    ('Wordplay/Puns', 'Jokes based on word meanings or sounds'),
+                                    ('Visual Humor', 'Funny because of what you see in the image'),
+                                    ('Dark Humor', 'Humor about serious, taboo, or uncomfortable topics'),
+                                    ('Self-deprecating', 'Making fun of oneself or one\'s own group'),
+                                    ('Social Commentary', 'Making a point about society, politics, or culture'),
+                                    ('Pop Culture Reference', 'References to movies, TV, celebrities, etc.'),
+                                    ('Wholesome', 'Feel-good, positive, heartwarming humor'),
+                                    ('Not Humorous', 'This is not meant to be funny')
+                                ] %}
+                                
+                                {% for humor_type, description in humor_types %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="humor_type" 
+                                               value="{{ humor_type }}" id="humor_{{ loop.index }}" required>
+                                        <label class="form-check-label" for="humor_{{ loop.index }}">
+                                            <strong>{{ humor_type }}</strong>
+                                            <br><small class="text-muted">{{ description }}</small>
+                                        </label>
                                     </div>
                                 </div>
-                            </label>
+                                {% endfor %}
+                            </div>
                         </div>
-                        {% endfor %}
+                    </div>
+                    
+                    <!-- Emotions Evaluation -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">😊 What emotions does this meme convey?</h5>
+                            <p class="card-text small text-muted mb-3">Select all emotions that apply (you can choose multiple):</p>
+                            
+                            <div class="row">
+                                {% set emotions = [
+                                    ('Joy', '😄', 'Happiness, laughter, amusement'),
+                                    ('Frustration', '😤', 'Annoyance, irritation, anger'),
+                                    ('Confusion', '😕', 'Bewilderment, uncertainty, "what?"'),
+                                    ('Pride', '😎', 'Confidence, superiority, accomplishment'),
+                                    ('Nostalgia', '🥺', 'Longing for the past, bittersweet memories'),
+                                    ('Anxiety', '😰', 'Stress, worry, nervousness'),
+                                    ('Relief', '😌', 'Comfort, release from tension'),
+                                    ('Surprise', '😲', 'Shock, amazement, unexpectedness'),
+                                    ('Embarrassment', '😳', 'Shame, awkwardness, cringe'),
+                                    ('Satisfaction', '😌', 'Contentment, fulfillment'),
+                                    ('Curiosity', '🤔', 'Interest, wonder, questioning'),
+                                    ('Empathy', '🤝', 'Understanding, shared feeling')
+                                ] %}
+                                
+                                {% for emotion, emoji, description in emotions %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="emotions" 
+                                               value="{{ emotion }}" id="emotion_{{ loop.index }}">
+                                        <label class="form-check-label" for="emotion_{{ loop.index }}">
+                                            <span class="me-1">{{ emoji }}</span><strong>{{ emotion }}</strong>
+                                            <br><small class="text-muted">{{ description }}</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Cultural Context (Optional) -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">🌍 Cultural Context <span class="text-muted">(Optional)</span></h5>
+                            <p class="card-text small text-muted mb-3">How much cultural knowledge is needed to understand this meme?</p>
+                            
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="context_level" id="context1" value="Universal">
+                                <label class="btn btn-outline-success" for="context1">
+                                    <strong>Universal</strong><br>
+                                    <small>Anyone can understand</small>
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="context_level" id="context2" value="Basic Internet">
+                                <label class="btn btn-outline-info" for="context2">
+                                    <strong>Basic Internet</strong><br>
+                                    <small>Need basic web culture</small>
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="context_level" id="context3" value="Pop Culture">
+                                <label class="btn btn-outline-warning" for="context3">
+                                    <strong>Pop Culture</strong><br>
+                                    <small>Need cultural references</small>
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="context_level" id="context4" value="Specialized">
+                                <label class="btn btn-outline-danger" for="context4">
+                                    <strong>Specialized</strong><br>
+                                    <small>Need specific knowledge</small>
+                                </label>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- Confidence Level -->
-                    <div class="card bg-light mt-4">
+                    <div class="card bg-light mb-4">
                         <div class="card-body">
-                            <h6 class="card-title">How confident are you in your choice?</h6>
-                            <div class="btn-group w-100" role="group" aria-label="Confidence level">
+                            <h6 class="card-title">How confident are you in your evaluation?</h6>
+                            <div class="btn-group w-100" role="group">
                                 <input type="radio" class="btn-check" name="confidence_level" id="conf1" value="1">
                                 <label class="btn btn-outline-danger" for="conf1">😰 Not Sure</label>
                                 
@@ -117,24 +186,24 @@
                         </div>
                     </div>
                     
-                    <div class="text-center mt-4">
+                    <div class="text-center">
                         <button type="submit" class="btn btn-primary btn-lg px-5" id="submitBtn" disabled>
                             ✅ Submit Evaluation
                         </button>
                         <div class="mt-2">
-                            <small class="text-muted">Select an option to continue</small>
+                            <small class="text-muted" id="submitHint">Select humor type and at least one emotion to continue</small>
                         </div>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Skip Option (for problematic memes) -->
+        <!-- Skip Option -->
         <div class="text-center mt-3">
             <details class="text-muted">
                 <summary style="cursor: pointer;">Having trouble with this meme?</summary>
                 <div class="mt-2">
-                    <p class="small">If this meme is unclear, inappropriate, or you can't determine the best description:</p>
+                    <p class="small">If this meme is unclear, inappropriate, or you can't determine the humor/emotions:</p>
                     <a href="{{ url_for('evaluate') }}" class="btn btn-outline-secondary btn-sm">
                         ⏭️ Skip This Meme
                     </a>
@@ -145,37 +214,20 @@
 </div>
 
 <style>
-.evaluation-card {
-    transition: all 0.3s ease;
+.form-check-label {
     cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
 }
 
-.option-card {
-    border: 2px solid #dee2e6;
-    transition: all 0.3s ease;
+.form-check-label:hover {
+    background-color: rgba(0,123,255,0.1);
 }
 
-.option-card:hover {
-    border-color: #007bff;
-    box-shadow: 0 4px 12px rgba(0,123,255,0.15);
-    transform: translateY(-2px);
-}
-
-.evaluation-card input[type="radio"]:checked + .option-card {
-    border-color: #28a745;
-    background-color: #f8fff9;
-    box-shadow: 0 4px 12px rgba(40,167,69,0.25);
-    transform: translateY(-2px);
-}
-
-.evaluation-card input[type="radio"]:checked + .option-card .card-header {
-    background-color: #28a745;
-    color: white;
-}
-
-.option-letter {
-    font-weight: bold;
-    font-size: 1.1em;
+.form-check-input:checked + .form-check-label {
+    background-color: rgba(40,167,69,0.2);
+    border: 1px solid #28a745;
 }
 
 .meme-img {
@@ -189,8 +241,13 @@
     min-width: 80px;
 }
 
-.btn-check:checked + .btn-outline-danger {
-    background-color: #dc3545;
+.btn-check:checked + .btn-outline-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-check:checked + .btn-outline-info {
+    background-color: #17a2b8;
     color: white;
 }
 
@@ -199,23 +256,9 @@
     color: black;
 }
 
-.btn-check:checked + .btn-outline-info {
-    background-color: #17a2b8;
+.btn-check:checked + .btn-outline-danger {
+    background-color: #dc3545;
     color: white;
-}
-
-.btn-check:checked + .btn-outline-success {
-    background-color: #28a745;
-    color: white;
-}
-
-details summary {
-    color: #6c757d;
-    font-size: 0.9em;
-}
-
-details[open] summary {
-    margin-bottom: 10px;
 }
 </style>
 
@@ -235,18 +278,37 @@ function updateTimer() {
 // Start timer
 timerInterval = setInterval(updateTimer, 1000);
 
-// Enable submit button when option selected
-document.querySelectorAll('input[name="chosen_description"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        document.getElementById('submitBtn').disabled = false;
-        document.querySelector('.text-muted').textContent = 'Click submit when ready';
-        
-        // Add visual feedback
-        document.querySelectorAll('.option-card').forEach(card => {
-            card.classList.remove('selected');
-        });
-        this.closest('.option-card').classList.add('selected');
-    });
+// Check form validity
+function checkFormValidity() {
+    const humorSelected = document.querySelector('input[name="humor_type"]:checked');
+    const emotionsSelected = document.querySelectorAll('input[name="emotions"]:checked');
+    const submitBtn = document.getElementById('submitBtn');
+    const hint = document.getElementById('submitHint');
+    
+    if (humorSelected && emotionsSelected.length > 0) {
+        submitBtn.disabled = false;
+        hint.textContent = 'Ready to submit!';
+        hint.className = 'text-success';
+    } else {
+        submitBtn.disabled = true;
+        if (!humorSelected && emotionsSelected.length === 0) {
+            hint.textContent = 'Select humor type and at least one emotion to continue';
+        } else if (!humorSelected) {
+            hint.textContent = 'Please select a humor type';
+        } else {
+            hint.textContent = 'Please select at least one emotion';
+        }
+        hint.className = 'text-muted';
+    }
+}
+
+// Add event listeners
+document.querySelectorAll('input[name="humor_type"]').forEach(radio => {
+    radio.addEventListener('change', checkFormValidity);
+});
+
+document.querySelectorAll('input[name="emotions"]').forEach(checkbox => {
+    checkbox.addEventListener('change', checkFormValidity);
 });
 
 // Handle form submission
@@ -257,28 +319,32 @@ document.getElementById('evaluationForm').addEventListener('submit', function(e)
     // Stop timer
     clearInterval(timerInterval);
     
-    // Disable submit button to prevent double submission
+    // Disable submit button
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
     submitBtn.innerHTML = '⏳ Submitting...';
 });
 
-// Keyboard shortcuts
+// Keyboard shortcuts for humor types (1-9, 0, -, =)
 document.addEventListener('keydown', function(e) {
-    if (e.key >= '1' && e.key <= '4') {
-        const options = document.querySelectorAll('input[name="chosen_description"]');
-        const index = parseInt(e.key) - 1;
-        if (options[index]) {
-            options[index].checked = true;
-            options[index].dispatchEvent(new Event('change'));
-        }
-    } else if (e.key === 'Enter' && !document.getElementById('submitBtn').disabled) {
-        document.getElementById('evaluationForm').submit();
+    const humorInputs = document.querySelectorAll('input[name="humor_type"]');
+    let index = -1;
+    
+    if (e.key >= '1' && e.key <= '9') {
+        index = parseInt(e.key) - 1;
+    } else if (e.key === '0') {
+        index = 9;
+    } else if (e.key === '-') {
+        index = 10;
+    }
+    
+    if (index >= 0 && index < humorInputs.length) {
+        humorInputs[index].checked = true;
+        checkFormValidity();
     }
 });
 
-// Add keyboard shortcut hints
-document.querySelector('.text-center .text-muted').innerHTML += 
-    '<br><small>💡 Tip: Use keys 1-4 to select options, Enter to submit</small>';
+// Initial check
+checkFormValidity();
 </script>
 {% endblock %}
