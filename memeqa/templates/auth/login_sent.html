@@ -1,0 +1,54 @@
+<!-- templates/login_sent.html -->
+{% extends "base.html" %}
+
+{% block title %}Login Link Sent - MemeQA{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="text-center mb-4">
+            <div class="display-1 text-success">📧</div>
+            <h1>Check Your Email!</h1>
+        </div>
+        
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                <h5 class="card-title">Login Link Sent</h5>
+                <p class="card-text">
+                    We've sent a login link to:
+                    <br><strong>{{ email }}</strong>
+                </p>
+                <p class="text-muted small">
+                    Click the link in your email to log into your MemeQA account. 
+                    The link will expire in 24 hours.
+                </p>
+                
+                {% if development %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Development Mode:</strong> Check your console/terminal for the login link!
+                </div>
+                {% endif %}
+                
+                <hr>
+                
+                <div class="d-grid gap-2 d-md-block">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-primary">
+                        <i class="bi bi-house"></i> Back to Home
+                    </a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Login
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <small class="text-muted">
+                Didn't receive the email? Check your spam folder or 
+                <a href="{{ url_for('auth.register') }}">request a new link</a>.
+            </small>
+        </div>
+    </div>
+</div>
+{% endblock %}

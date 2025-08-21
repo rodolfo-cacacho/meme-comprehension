@@ -117,7 +117,7 @@
                             </div>
                         </div>
                     {% else %}
-                        <a href="{{ url_for('register') }}" class="btn btn-sm btn-outline-primary">
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-person-plus"></i> Join Research
                         </a>
                     {% endif %}
@@ -127,7 +127,7 @@
                     <div class="alert alert-info">
                         <h5>🚀 Bootstrap Phase</h5>
                         <p class="mb-2">Only {{ available_memes }} memes available for evaluation. You can upload without completing {{eval_mems}} evaluations to help build the initial dataset!</p>
-                        <a href="{{ url_for('upload_file') }}" class="btn btn-primary">
+                        <a href="{{ url_for('memes.upload_file') }}" class="btn btn-primary">
                             <i class="bi bi-upload"></i> Upload Meme
                         </a>
                     </div>
@@ -184,7 +184,7 @@
                             <div class="alert alert-success mb-0">
                                 <h6>🎉 Ready to Upload!</h6>
                                 <p class="small mb-2">You've completed all required evaluations.</p>
-                                <a href="{{ url_for('upload_file') }}" class="btn btn-success btn-sm w-100">
+                                <a href="{{ url_for('memes.upload_file') }}" class="btn btn-success btn-sm w-100">
                                     <i class="bi bi-upload"></i> Upload Meme
                                 </a>
                             </div>
@@ -192,7 +192,7 @@
                             <div class="alert alert-warning mb-0">
                                 <h6>📝 Keep Going!</h6>
                                 <p class="small mb-2">Complete {{ eval_mems - evaluation_count }} more evaluation{{ 's' if (eval_mems - evaluation_count) != 1 else '' }} to unlock uploads.</p>
-                                <a href="{{ url_for('evaluate') }}" class="btn btn-warning btn-sm w-100">
+                                <a href="{{ url_for('evaluations.evaluate') }}" class="btn btn-warning btn-sm w-100">
                                     {% if evaluation_count == 0 %}
                                         <i class="bi bi-play"></i> Start Evaluating
                                     {% else %}
@@ -204,7 +204,7 @@
                             <div class="alert alert-primary mb-0">
                                 <h6>🚀 Bootstrap Mode</h6>
                                 <p class="small mb-2">Help us get started by uploading memes!</p>
-                                <a href="{{ url_for('upload_file') }}" class="btn btn-primary btn-sm w-100">
+                                <a href="{{ url_for('memes.upload_file') }}" class="btn btn-primary btn-sm w-100">
                                     <i class="bi bi-upload"></i> Upload Meme
                                 </a>
                             </div>
@@ -222,7 +222,7 @@
                         <div class="display-4 text-primary mb-3">📊</div>
                         <h5 class="card-title">View Gallery</h5>
                         <p class="card-text small">Browse all submitted memes and their detailed classifications</p>
-                        <a href="{{ url_for('gallery') }}" class="btn btn-outline-primary">
+                        <a href="{{ url_for('memes.gallery') }}" class="btn btn-outline-primary">
                             <i class="bi bi-images"></i> Browse Memes
                         </a>
                     </div>
@@ -234,7 +234,7 @@
                         <div class="display-4 text-success mb-3">📈</div>
                         <h5 class="card-title">Statistics</h5>
                         <p class="card-text small">See dataset statistics and contributor metrics</p>
-                        <a href="{{ url_for('stats') }}" class="btn btn-outline-success">
+                        <a href="{{ url_for('main.stats') }}" class="btn btn-outline-success">
                             <i class="bi bi-bar-chart"></i> View Stats
                         </a>
                     </div>
@@ -247,7 +247,7 @@
                             <div class="display-4 text-info mb-3">👤</div>
                             <h5 class="card-title">Your Profile</h5>
                             <p class="card-text small">View your contributions and performance analytics</p>
-                            <a href="{{ url_for('profile') }}" class="btn btn-outline-info">
+                            <a href="{{ url_for('auth.profile') }}" class="btn btn-outline-info">
                                 <i class="bi bi-person"></i> View Profile
                             </a>
                         </div>
@@ -260,7 +260,7 @@
                             <div class="display-4 text-warning mb-3">🎓</div>
                             <h5 class="card-title">Join Research</h5>
                             <p class="card-text small">Register to track contributions and get research updates</p>
-                            <a href="{{ url_for('register') }}" class="btn btn-warning">
+                            <a href="{{ url_for('auth.register') }}" class="btn btn-warning">
                                 <i class="bi bi-person-plus"></i> Register
                             </a>
                         </div>
@@ -275,10 +275,10 @@
                         <h5 class="card-title">Dev Tools</h5>
                         <p class="card-text small">Analytics dashboard and data export (dev only)</p>
                         <div class="d-grid gap-2">
-                            <a href="{{ url_for('analytics') }}" class="btn btn-outline-secondary btn-sm">
+                            <a href="{{ url_for('main.analytics') }}" class="btn btn-outline-secondary btn-sm">
                                 <i class="bi bi-graph-up"></i> Analytics
                             </a>
-                            <a href="{{ url_for('reset_session') }}" class="btn btn-outline-secondary btn-sm">
+                            <a href="{{ url_for('main.reset_session') }}" class="btn btn-outline-secondary btn-sm">
                                 <i class="bi bi-arrow-clockwise"></i> Reset
                             </a>
                         </div>
@@ -298,20 +298,20 @@
                 </p>
                 <div class="d-grid gap-2 d-md-block">
                     {% if evaluation_count < 10 %}
-                        <a href="{{ url_for('evaluate') }}" class="btn btn-light btn-lg me-2">
+                        <a href="{{ url_for('evaluations.evaluate') }}" class="btn btn-light btn-lg me-2">
                             <i class="bi bi-play-circle"></i> Start Evaluating
                         </a>
                     {% else %}
-                        <a href="{{ url_for('upload_file') }}" class="btn btn-light btn-lg me-2">
+                        <a href="{{ url_for('memes.upload_file') }}" class="btn btn-light btn-lg me-2">
                             <i class="bi bi-upload"></i> Upload Meme
                         </a>
                     {% endif %}
                     {% if not current_user %}
-                        <a href="{{ url_for('register') }}" class="btn btn-outline-light btn-lg">
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-outline-light btn-lg">
                             <i class="bi bi-person-plus"></i> Join Research
                         </a>
                     {% else %}
-                        <a href="{{ url_for('profile') }}" class="btn btn-outline-light btn-lg">
+                        <a href="{{ url_for('auth.profile') }}" class="btn btn-outline-light btn-lg">
                             <i class="bi bi-person"></i> View Profile
                         </a>
                     {% endif %}

@@ -40,7 +40,7 @@
                 </div>
             </div>
             <div class="card-body text-center">
-                <img src="{{ url_for('uploaded_file', filename=meme.filename) }}" 
+                <img src="{{ url_for('memes.uploaded_file', filename=meme.filename) }}" 
                      class="meme-img mb-3" 
                      alt="{{ meme.original_filename }}"
                      style="max-height: 450px; max-width: 100%; object-fit: contain;">
@@ -53,7 +53,7 @@
                 <h4 class="mb-0">🤔 What do you think about this meme?</h4>
             </div>
             <div class="card-body">
-                <form method="post" action="{{ url_for('submit_humor_emotion_evaluation') }}" id="evaluationForm">
+                <form method="post" action="{{ url_for('evaluations.submit_humor_emotion_evaluation') }}" id="evaluationForm">
                     <input type="hidden" name="meme_id" value="{{ meme.id }}">
                     <input type="hidden" name="evaluation_time" id="evaluation_time" value="0">
                     
@@ -204,7 +204,7 @@
                 <summary style="cursor: pointer;">Having trouble with this meme?</summary>
                 <div class="mt-2">
                     <p class="small">If this meme is unclear, inappropriate, or you can't determine the humor/emotions:</p>
-                    <a href="{{ url_for('evaluate') }}" class="btn btn-outline-secondary btn-sm">
+                    <a href="{{ url_for('evaluations.evaluate') }}" class="btn btn-outline-secondary btn-sm">
                         ⏭️ Skip This Meme
                     </a>
                 </div>

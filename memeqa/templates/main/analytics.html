@@ -8,11 +8,11 @@
     <h1>📊 Research Analytics Dashboard</h1>
     <div>
         {% if development %}
-        <a href="{{ url_for('export_data') }}" class="btn btn-outline-primary me-2">
+        <a href="{{ url_for('main.export_data') }}" class="btn btn-outline-primary me-2">
             📥 Export Data
         </a>
         {% endif %}
-        <a href="{{ url_for('index') }}" class="btn btn-primary">Back to Home</a>
+        <a href="{{ url_for('main.index') }}" class="btn btn-primary">Back to Home</a>
     </div>
 </div>
 
@@ -440,7 +440,7 @@
                 <div class="card bg-light">
                     <div class="card-body">
                         <h6>Export Options</h6>
-                        <a href="{{ url_for('export_data') }}" class="btn btn-primary btn-sm mb-2 w-100">
+                        <a href="{{ url_for('main.export_data') }}" class="btn btn-primary btn-sm mb-2 w-100">
                             📊 JSON Export
                         </a>
                         <small class="text-muted d-block">

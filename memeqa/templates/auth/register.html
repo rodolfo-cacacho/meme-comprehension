@@ -117,7 +117,7 @@
                         <button type="submit" class="btn btn-primary btn-lg">
                             🚀 Join the Research
                         </button>
-                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                        <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
                             Continue as Anonymous
                         </a>
                     </div>
@@ -152,7 +152,7 @@
             <div class="card-body">
                 <h5 class="card-title">🔑 Already Registered?</h5>
                 <p class="card-text">Enter your email to get a login link sent to you:</p>
-                <form method="post" action="{{ url_for('request_login') }}" class="row g-3">
+                <form method="post" action="{{ url_for('auth.request_login') }}" class="row g-3">
                     <div class="col-auto flex-grow-1">
                         <input type="email" class="form-control" name="login_email" placeholder="your@email.com" required>
                     </div>

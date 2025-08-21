@@ -1,43 +1,39 @@
-<!-- templates/login_sent.html -->
 {% extends "base.html" %}
 
-{% block title %}Login Link Sent - MemeQA{% endblock %}
+{% block title %}Registration Confirmation Sent - MemeQA{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6">
         <div class="text-center mb-4">
             <div class="display-1 text-success">📧</div>
-            <h1>Check Your Email!</h1>
+            <h1>Almost There!</h1>
         </div>
         
         <div class="card shadow-sm">
             <div class="card-body text-center">
-                <h5 class="card-title">Login Link Sent</h5>
+                <h5 class="card-title">Confirm Your Email</h5>
                 <p class="card-text">
-                    We've sent a login link to:
+                    We've sent a confirmation email to:
                     <br><strong>{{ email }}</strong>
                 </p>
-                <p class="text-muted small">
-                    Click the link in your email to log into your MemeQA account. 
+                <p class="text-muted">
+                    Please check your email and click the confirmation link to activate your account.
                     The link will expire in 24 hours.
                 </p>
                 
-                {% if development %}
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle"></i>
-                    <strong>Development Mode:</strong> Check your console/terminal for the login link!
-                </div>
-                {% endif %}
-                
                 <hr>
                 
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Why confirm?</strong><br>
+                    Email confirmation helps us ensure you receive important research updates 
+                    and maintain the quality of our contributor database.
+                </div>
+                
                 <div class="d-grid gap-2 d-md-block">
-                    <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-primary">
                         <i class="bi bi-house"></i> Back to Home
-                    </a>
-                    <a href="{{ url_for('register') }}" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left"></i> Back to Login
                     </a>
                 </div>
             </div>
@@ -46,7 +42,7 @@
         <div class="text-center mt-4">
             <small class="text-muted">
                 Didn't receive the email? Check your spam folder or 
-                <a href="{{ url_for('register') }}">request a new link</a>.
+                <a href="{{ url_for('auth.register') }}">register again</a>.
             </small>
         </div>
     </div>

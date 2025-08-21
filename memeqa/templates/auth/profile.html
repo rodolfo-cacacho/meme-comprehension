@@ -9,10 +9,10 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>👤 Your Profile</h1>
             <div>
-                <a href="{{ url_for('index') }}" class="btn btn-outline-primary me-2">
+                <a href="{{ url_for('main.index') }}" class="btn btn-outline-primary me-2">
                     <i class="bi bi-house"></i> Back to Home
                 </a>
-                <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary">
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-box-arrow-right"></i> Sign Out
                 </a>
             </div>
@@ -55,12 +55,12 @@
                         {% endif %}
                         <div class="mb-2">
                             <strong><i class="bi bi-calendar-check"></i> Member Since:</strong> 
-                            {{ contributor.registration_date[:10] if contributor.registration_date else 'Unknown' }}
+                            {{ contributor.registration_date.strftime('%Y-%m-%d') if contributor.registration_date else 'Unknown' }}
                         </div>
                         {% if contributor.last_login %}
                         <div class="mb-2">
                             <strong><i class="bi bi-clock"></i> Last Login:</strong> 
-                            {{ contributor.last_login[:10] }}
+                            {{ contributor.last_login.strftime('%Y-%m-%d') if contributor.last_login else 'Unknown' }}
                         </div>
                         {% endif %}
                     </div>
@@ -183,7 +183,7 @@
                 {% if total_evals < eval_mems and total_subs == 0 %}
                 <div class="text-center text-muted">
                     <p>Complete evaluations and upload memes to earn achievements!</p>
-                    <a href="{{ url_for('evaluate') }}" class="btn btn-primary btn-sm me-2">
+                    <a href="{{ url_for('evaluations.evaluate') }}" class="btn btn-primary btn-sm me-2">
                         <i class="bi bi-play"></i> Start Evaluating
                     </a>
                 </div>
@@ -217,7 +217,7 @@
                             {% for meme in recent_memes %}
                             <tr>
                                 <td>
-                                    <img src="{{ url_for('uploaded_file', filename=meme.filename) }}" 
+                                    <img src="{{ url_for('memes.uploaded_file', filename=meme.filename) }}" 
                                          style="width: 60px; height: 40px; object-fit: cover;" 
                                          class="rounded border">
                                 </td>
@@ -255,7 +255,7 @@
                                 </td>
                                 <td>
                                     <small class="text-muted">
-                                        {{ meme.upload_date[:10] if meme.upload_date else 'Unknown' }}
+                                        {{ meme.upload_date.strftime('%Y-%m-%d') if meme.upload_date else 'Unknown' }}
                                     </small>
                                 </td>
                             </tr>
@@ -268,12 +268,12 @@
                     <i class="bi bi-upload display-4 text-muted mb-3"></i>
                     <p>You haven't contributed any memes yet.</p>
                     {% if total_evals >= eval_mems %}
-                        <a href="{{ url_for('upload_file') }}" class="btn btn-success">
+                        <a href="{{ url_for('memes.upload_file') }}" class="btn btn-success">
                             <i class="bi bi-upload"></i> Upload Your First Meme
                         </a>
                     {% else %}
                         <p class="small">Complete {{ eval_mems - total_evals }} more evaluations to unlock uploads!</p>
-                        <a href="{{ url_for('evaluate') }}" class="btn btn-primary">
+                        <a href="{{ url_for('evaluations.evaluate') }}" class="btn btn-primary">
                             <i class="bi bi-play"></i> Continue Evaluating
                         </a>
                     {% endif %}
@@ -333,7 +333,7 @@
                 <div class="text-center text-muted py-4">
                     <i class="bi bi-bar-chart display-4 text-muted mb-3"></i>
                     <p>You haven't completed any evaluations yet.</p>
-                    <a href="{{ url_for('evaluate') }}" class="btn btn-primary">
+                    <a href="{{ url_for('evaluations.evaluate') }}" class="btn btn-primary">
                         <i class="bi bi-play"></i> Start Evaluating Memes
                     </a>
                 </div>
@@ -344,19 +344,19 @@
         <!-- Quick Actions -->
         <div class="row mt-4 mb-4">
             <div class="col-md-4 mb-2">
-                <a href="{{ url_for('evaluate') }}" class="btn btn-outline-primary w-100">
+                <a href="{{ url_for('evaluations.evaluate') }}" class="btn btn-outline-primary w-100">
                     <i class="bi bi-check-square"></i> Continue Evaluating
                 </a>
             </div>
             {% if total_evals >= eval_mems %}
             <div class="col-md-4 mb-2">
-                <a href="{{ url_for('upload_file') }}" class="btn btn-outline-success w-100">
+                <a href="{{ url_for('memes.upload_file') }}" class="btn btn-outline-success w-100">
                     <i class="bi bi-upload"></i> Upload Meme
                 </a>
             </div>
             {% endif %}
             <div class="col-md-4 mb-2">
-                <a href="{{ url_for('gallery') }}" class="btn btn-outline-info w-100">
+                <a href="{{ url_for('memes.gallery') }}" class="btn btn-outline-info w-100">
                     <i class="bi bi-images"></i> Browse Gallery
                 </a>
             </div>

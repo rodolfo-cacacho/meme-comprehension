@@ -16,24 +16,21 @@ import time
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from config import Config
+from database import get_db, close_db, init_db
+
 
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-EMAIL_USER = os.environ.get('GMAIL_USER')
-EMAIL_PW = os.environ.get('GMAIL_APP_PASSWORD')
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# Environment detection
-DEVELOPMENT = os.environ.get('ENV') == 'development' or app.debug
-print(f"Running in {'development' if DEVELOPMENT else 'production'} mode")
+app.config.from_object(Config)
 
-# Allowed file extensions
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
-MIN_MEME_COUNT = 5
-EVAL_COUNT = 5  # Number of evaluations required to upload memes
+# Register database teardown
+app.teardown_appcontext(close_db)
+
+print(f"Running in {'development' if app.config['DEVELOPMENT'] else 'production'} mode")
+
 
 # Create uploads directory if it doesn't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -69,142 +66,142 @@ def add_evaluation_fields():
         conn.close()
 
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
-def init_db():
-    """Initialize the enhanced database with comprehensive meme classification"""
-    conn = sqlite3.connect('memes.db')
-    cursor = conn.cursor()
+# def init_db():
+#     """Initialize the enhanced database with comprehensive meme classification"""
+#     conn = sqlite3.connect('memes.db')
+#     cursor = conn.cursor()
     
-    # Enhanced memes table with comprehensive classification
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS memes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            filename TEXT NOT NULL,
-            original_filename TEXT NOT NULL,
+#     # Enhanced memes table with comprehensive classification
+#     cursor.execute('''
+#         CREATE TABLE IF NOT EXISTS memes (
+#             id INTEGER PRIMARY KEY AUTOINCREMENT,
+#             filename TEXT NOT NULL,
+#             original_filename TEXT NOT NULL,
             
-            -- Contributor Information
-            contributor_name TEXT,
-            contributor_email TEXT,
-            contributor_country TEXT NOT NULL,
-            meme_origin_country TEXT,
-            platform_found TEXT NOT NULL,
-            uploader_session TEXT,
-            uploader_user_id INTEGER,
+#             -- Contributor Information
+#             contributor_name TEXT,
+#             contributor_email TEXT,
+#             contributor_country TEXT NOT NULL,
+#             meme_origin_country TEXT,
+#             platform_found TEXT NOT NULL,
+#             uploader_session TEXT,
+#             uploader_user_id INTEGER,
             
-            -- Content Classification
-            meme_content TEXT NOT NULL,
-            meme_template TEXT,
-            estimated_year TEXT NOT NULL,
-            cultural_reach TEXT NOT NULL,
-            niche_community TEXT,
+#             -- Content Classification
+#             meme_content TEXT NOT NULL,
+#             meme_template TEXT,
+#             estimated_year TEXT NOT NULL,
+#             cultural_reach TEXT NOT NULL,
+#             niche_community TEXT,
             
-            -- Humor & Emotional Analysis
-            humor_explanation TEXT NOT NULL,
-            humor_type TEXT NOT NULL,
-            emotions_conveyed TEXT NOT NULL, -- JSON array of selected emotions
+#             -- Humor & Emotional Analysis
+#             humor_explanation TEXT NOT NULL,
+#             humor_type TEXT NOT NULL,
+#             emotions_conveyed TEXT NOT NULL, -- JSON array of selected emotions
             
-            -- Context & References
-            cultural_references TEXT,
-            context_required TEXT NOT NULL,
-            age_group_target TEXT,
+#             -- Context & References
+#             cultural_references TEXT,
+#             context_required TEXT NOT NULL,
+#             age_group_target TEXT,
             
-            -- AI Training Descriptions
-            meme_description TEXT NOT NULL,
+#             -- AI Training Descriptions
+#             meme_description TEXT NOT NULL,
             
-            -- Additional Data
-            additional_notes TEXT,
-            terms_agreement BOOLEAN NOT NULL DEFAULT 0,
+#             -- Additional Data
+#             additional_notes TEXT,
+#             terms_agreement BOOLEAN NOT NULL DEFAULT 0,
             
-            -- Metadata
-            upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+#             -- Metadata
+#             upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+#             last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             
-            FOREIGN KEY (uploader_user_id) REFERENCES users (id)
-        )
-    ''')
+#             FOREIGN KEY (uploader_user_id) REFERENCES users (id)
+#         )
+#     ''')
     
-    # Enhanced evaluations table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS evaluations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id TEXT NOT NULL,
-            user_id INTEGER,
-            meme_id INTEGER NOT NULL,
-            chosen_description INTEGER NOT NULL,
-            was_correct BOOLEAN, -- Whether the chosen description was the correct one
-            confidence_level INTEGER DEFAULT 3, -- 1-4 confidence rating
-            evaluation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            evaluation_time_seconds INTEGER, -- Time spent on evaluation
-            evaluated_humor_type TEXT, -- Humor type evaluated by user
-            evaluated_emotions, 'TEXT',  -- JSON array
-            evaluated_context_level, 'TEXT',
-            matches_humor_type, 'BOOLEAN',
-            emotion_overlap_score, 'REAL', -- 0.0-1.0 based on overlap
-            FOREIGN KEY (meme_id) REFERENCES memes (id),
-            FOREIGN KEY (user_id) REFERENCES users (id)
-        )
-    ''')
+#     # Enhanced evaluations table
+#     cursor.execute('''
+#         CREATE TABLE IF NOT EXISTS evaluations (
+#             id INTEGER PRIMARY KEY AUTOINCREMENT,
+#             session_id TEXT NOT NULL,
+#             user_id INTEGER,
+#             meme_id INTEGER NOT NULL,
+#             chosen_description INTEGER NOT NULL,
+#             was_correct BOOLEAN, -- Whether the chosen description was the correct one
+#             confidence_level INTEGER DEFAULT 3, -- 1-4 confidence rating
+#             evaluation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+#             evaluation_time_seconds INTEGER, -- Time spent on evaluation
+#             evaluated_humor_type TEXT, -- Humor type evaluated by user
+#             evaluated_emotions, 'TEXT',  -- JSON array
+#             evaluated_context_level, 'TEXT',
+#             matches_humor_type, 'BOOLEAN',
+#             emotion_overlap_score, 'REAL', -- 0.0-1.0 based on overlap
+#             FOREIGN KEY (meme_id) REFERENCES memes (id),
+#             FOREIGN KEY (user_id) REFERENCES users (id)
+#         )
+#     ''')
     
-    # Users table for registered contributors
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT, -- For future login functionality
-            country TEXT,
-            affiliation TEXT,
-            research_interest TEXT,
+#     # Users table for registered contributors
+#     cursor.execute('''
+#         CREATE TABLE IF NOT EXISTS users (
+#             id INTEGER PRIMARY KEY AUTOINCREMENT,
+#             name TEXT NOT NULL,
+#             email TEXT UNIQUE NOT NULL,
+#             password_hash TEXT, -- For future login functionality
+#             country TEXT,
+#             affiliation TEXT,
+#             research_interest TEXT,
             
-            -- Notification preferences
-            notify_updates BOOLEAN DEFAULT 1,
-            notify_milestones BOOLEAN DEFAULT 1,
-            data_access_interest BOOLEAN DEFAULT 0,
+#             -- Notification preferences
+#             notify_updates BOOLEAN DEFAULT 1,
+#             notify_milestones BOOLEAN DEFAULT 1,
+#             data_access_interest BOOLEAN DEFAULT 0,
             
-            -- Statistics
-            total_submissions INTEGER DEFAULT 0,
-            total_evaluations INTEGER DEFAULT 0,
-            evaluation_accuracy REAL DEFAULT 0.0,
+#             -- Statistics
+#             total_submissions INTEGER DEFAULT 0,
+#             total_evaluations INTEGER DEFAULT 0,
+#             evaluation_accuracy REAL DEFAULT 0.0,
             
-            -- Metadata
-            registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            last_login TIMESTAMP,
-            is_active BOOLEAN DEFAULT 1
-        )
-    ''')
+#             -- Metadata
+#             registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+#             last_login TIMESTAMP,
+#             is_active BOOLEAN DEFAULT 1
+#         )
+#     ''')
     
-    # Analytics table for research insights
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS meme_analytics (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            meme_id INTEGER NOT NULL,
-            total_evaluations INTEGER DEFAULT 0,
-            correct_identifications INTEGER DEFAULT 0,
-            accuracy_rate REAL DEFAULT 0.0,
-            avg_evaluation_time REAL DEFAULT 0.0,
-            avg_confidence_level REAL DEFAULT 0.0,
-            difficulty_score REAL DEFAULT 0.0, -- Based on accuracy rate
-            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (meme_id) REFERENCES memes (id)
-        )
-    ''')
+#     # Analytics table for research insights
+#     cursor.execute('''
+#         CREATE TABLE IF NOT EXISTS meme_analytics (
+#             id INTEGER PRIMARY KEY AUTOINCREMENT,
+#             meme_id INTEGER NOT NULL,
+#             total_evaluations INTEGER DEFAULT 0,
+#             correct_identifications INTEGER DEFAULT 0,
+#             accuracy_rate REAL DEFAULT 0.0,
+#             avg_evaluation_time REAL DEFAULT 0.0,
+#             avg_confidence_level REAL DEFAULT 0.0,
+#             difficulty_score REAL DEFAULT 0.0, -- Based on accuracy rate
+#             last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+#             FOREIGN KEY (meme_id) REFERENCES memes (id)
+#         )
+#     ''')
     
-    # User sessions table for anonymous users
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS user_sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id TEXT UNIQUE NOT NULL,
-            user_id INTEGER,
-            created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            evaluations_completed INTEGER DEFAULT 0,
-            FOREIGN KEY (user_id) REFERENCES users (id)
-        )
-    ''')
+#     # User sessions table for anonymous users
+#     cursor.execute('''
+#         CREATE TABLE IF NOT EXISTS user_sessions (
+#             id INTEGER PRIMARY KEY AUTOINCREMENT,
+#             session_id TEXT UNIQUE NOT NULL,
+#             user_id INTEGER,
+#             created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+#             last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+#             evaluations_completed INTEGER DEFAULT 0,
+#             FOREIGN KEY (user_id) REFERENCES users (id)
+#         )
+#     ''')
     
-    conn.commit()
-    conn.close()
+#     conn.commit()
+#     conn.close()
 
 def get_db_connection():
     conn = sqlite3.connect('memes.db')
@@ -287,8 +284,8 @@ def update_meme_analytics(meme_id, was_correct, evaluation_time, confidence_leve
 
 
 def send_email_gmail(to_email, subject, body):
-    sender_email = EMAIL_USER
-    sender_password = EMAIL_PW  # Use App Password, not regular password
+    sender_email = app.config['GMAIL_USER']
+    sender_password = app.config['GMAIL_APP_PASSWORD']  # Use App Password, not regular password
     
     msg = MIMEMultipart()
     msg['From'] = sender_email
@@ -314,7 +311,7 @@ def send_email(to_email, subject, body):
     For development, just print the email. 
     For production, use services like SendGrid, Mailgun, or SMTP
     """
-    if DEVELOPMENT:
+    if app.config['DEVELOPMENT']:
         print("="*50)
         print(f"EMAIL TO: {to_email}")
         print(f"SUBJECT: {subject}")
@@ -474,10 +471,10 @@ def index():
     return render_template('index.html', 
                          evaluation_count=evaluation_count, 
                          available_memes=available_memes,
-                         eval_mems = EVAL_COUNT,
-                         memes_min = MIN_MEME_COUNT,
+                         eval_mems = app.config['EVAL_COUNT'],
+                         memes_min = app.config['MIN_MEME_COUNT'],
                          can_upload=can_upload,
-                         development=DEVELOPMENT,
+                         development=app.config['DEVELOPMENT'],
                          current_user=current_user)
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -538,8 +535,8 @@ def register():
         return redirect(url_for('index'))
     
     return render_template('register.html',
-                           eval_mems = EVAL_COUNT,
-                           memes_min = MIN_MEME_COUNT)
+                           eval_mems = app.config['EVAL_COUNT'],
+                           memes_min = app.config['MIN_MEME_COUNT'])
 
 @app.route('/request_login', methods=['POST'])
 def request_login():
@@ -591,8 +588,8 @@ THWS & CAIRO
 def login_sent():
     """Show confirmation that login link was sent"""
     email = request.args.get('email', '')
-    return render_template('login_sent.html',eval_mems = EVAL_COUNT,
-                           memes_min = MIN_MEME_COUNT,email=email)
+    return render_template('login_sent.html',eval_mems = app.config['EVAL_COUNT'],
+                           memes_min = app.config['MIN_MEME_COUNT'],email=email)
 
 @app.route('/login/<token>')
 def login_with_token(token):
@@ -775,8 +772,8 @@ def profile():
                          evaluation_stats=evaluation_stats,
                          contributor_rank=contributor_rank,
                          accuracy_rate=accuracy_rate,
-                         eval_mems=EVAL_COUNT,
-                         memes_min=MIN_MEME_COUNT)
+                         eval_mems=app.config['EVAL_COUNT'],
+                         memes_min=app.config['MIN_MEME_COUNT'])
 
 @app.route('/gallery')
 def gallery():
@@ -822,8 +819,8 @@ def gallery():
                          memes=pagination,
                          per_page=per_page,
                          current_user=current_user,
-                         eval_mems = EVAL_COUNT,
-                         memes_min = MIN_MEME_COUNT)
+                         eval_mems = app.config['EVAL_COUNT'],
+                         memes_min = app.config['MIN_MEME_COUNT'])
 # Updated evaluation table schema - add this to your migration
 def add_evaluation_fields():
     """Add new fields for humor/emotion evaluation"""
@@ -864,11 +861,11 @@ def evaluate():
     evaluation_count = get_user_evaluation_count()
     available_memes = get_available_memes_count()
     
-    if evaluation_count >= EVAL_COUNT:
+    if evaluation_count >= app.config['EVAL_COUNT']:
         flash('You have completed all required evaluations! You can now upload memes.')
         return redirect(url_for('upload_file'))
     
-    if available_memes < MIN_MEME_COUNT:
+    if available_memes < app.config['MIN_MEME_COUNT']:
         flash(f'Only {available_memes} memes available for evaluation. You can upload without completing 10 evaluations!')
         return redirect(url_for('upload_file'))
     
@@ -882,8 +879,8 @@ def evaluate():
                          meme=meme, 
                          evaluation_count=evaluation_count,
                          current_user=current_user,
-                         eval_mems = EVAL_COUNT,
-                         memes_min=MIN_MEME_COUNT)
+                         eval_mems = app.config['EVAL_COUNT'],
+                         memes_min=app.config['MIN_MEME_COUNT'])
 
 @app.route('/submit_humor_emotion_evaluation', methods=['POST'])
 def submit_humor_emotion_evaluation():
@@ -1014,7 +1011,7 @@ def submit_humor_emotion_evaluation():
                 feedback_parts.append("📝 Some emotion differences noted")
         
         feedback = " | ".join(feedback_parts) if feedback_parts else "Thanks for your evaluation!"
-        flash(f'{feedback} Progress: {evaluation_count}/{EVAL_COUNT} evaluations completed.')
+        flash(f'{feedback} Progress: {evaluation_count}/{app.config['EVAL_COUNT']} evaluations completed.')
         
     except Exception as e:
         print(f"Error processing evaluation: {e}")
@@ -1035,7 +1032,7 @@ def submit_humor_emotion_evaluation():
 @app.route('/evaluation_analytics')
 def evaluation_analytics():
     """Analytics for humor/emotion evaluation performance"""
-    if not DEVELOPMENT:
+    if not app.config['DEVELOPMENT']:
         abort(403)
     
     conn = get_db_connection()
@@ -1155,7 +1152,7 @@ def upload_file():
     available_memes = get_available_memes_count()
     
     if not can_user_upload():
-        remaining_evaluations = EVAL_COUNT - evaluation_count
+        remaining_evaluations = app.config['EVAL_COUNT'] - evaluation_count
         flash(f'You need to complete {remaining_evaluations} more evaluations before you can upload.')
         return redirect(url_for('evaluate'))
     
@@ -1318,8 +1315,8 @@ def upload_file():
     
     return render_template('upload_simplified.html',
                            current_user=current_user,
-                           eval_mems = EVAL_COUNT,
-                           memes_min = MIN_MEME_COUNT)
+                           eval_mems = app.config['EVAL_COUNT'],
+                           memes_min = app.config['MIN_MEME_COUNT'])
 
 @app.route('/submit_evaluation', methods=['POST'])
 def submit_evaluation():
@@ -1387,8 +1384,8 @@ def submit_evaluation():
     else:
         flash(f'❌ Not quite right, but thanks for participating! Progress: {evaluation_count}/10')
     
-    if evaluation_count >= EVAL_COUNT:
-        flash(f'🎉 Congratulations! You have completed all {EVAL_COUNT} evaluations. You can now upload your own meme!')
+    if evaluation_count >= app.config['EVAL_COUNT']:
+        flash(f'🎉 Congratulations! You have completed all {app.config['EVAL_COUNT']} evaluations. You can now upload your own meme!')
         return redirect(url_for('upload_file'))
     else:
         return redirect(url_for('evaluate'))
@@ -1413,8 +1410,8 @@ def stats():
                          unique_evaluators=unique_evaluators,
                          registered_users=registered_users,
                          current_user=current_user,
-                         eval_mems = EVAL_COUNT,
-                         memes_min = MIN_MEME_COUNT)
+                         eval_mems = app.config['EVAL_COUNT'],
+                         memes_min = app.config['MIN_MEME_COUNT'])
 
 @app.route('/analytics')
 def analytics():
@@ -1581,13 +1578,13 @@ def analytics():
                          difficult_memes=difficult_memes,
                          easy_memes=easy_memes,
                          current_user=current_user,
-                         eval_mems = EVAL_COUNT,
-                         memes_min = MIN_MEME_COUNT)
+                         eval_mems = app.config['EVAL_COUNT'],
+                         memes_min = app.config['MIN_MEME_COUNT'])
 
 @app.route('/export_data')
 def export_data():
     """Export research data (for researchers)"""
-    if not DEVELOPMENT:  # Add proper authentication in production
+    if not app.config['DEVELOPMENT']:  # Add proper authentication in production
         abort(403)
     
     conn = get_db_connection()
@@ -1632,7 +1629,7 @@ def export_data():
                 meme_dict['emotions_conveyed'] = []
         # Remove sensitive data
         meme_dict.pop('contributor_email', None)
-        if not DEVELOPMENT:
+        if not app.config['DEVELOPMENT']:
             meme_dict.pop('contributor_name', None)
         memes_json.append(meme_dict)
     
@@ -1663,7 +1660,7 @@ def export_data():
 @app.route('/reset_session')
 def reset_session():
     """Reset current session (for testing)"""
-    if not DEVELOPMENT:
+    if not app.config['DEVELOPMENT']:
         flash('This feature is only available in development mode.')
         return redirect(url_for('index'))
     
@@ -1710,36 +1707,36 @@ def can_user_upload():
     """Check if user can upload"""
     evaluation_count = get_user_evaluation_count()
     available_memes = get_available_memes_count()
-    return evaluation_count >= EVAL_COUNT or available_memes < MIN_MEME_COUNT
+    return evaluation_count >= app.config['EVAL_COUNT'] or available_memes < app.config['MIN_MEME_COUNT']
 
 # Error handlers
 @app.errorhandler(404)
 def not_found_error(error):
     """Handle 404 errors - Page not found"""
     return render_template('404.html',
-                           eval_mems = EVAL_COUNT,
-                         memes_min = MIN_MEME_COUNT), 404
+                           eval_mems = app.config['EVAL_COUNT'],
+                         memes_min = app.config['MIN_MEME_COUNT']), 404
 
 @app.errorhandler(500)
 def internal_error(error):
     """Handle 500 errors - Internal server error"""
     return render_template('500.html',
-                           eval_mems = EVAL_COUNT,
-                         memes_min = MIN_MEME_COUNT), 500
+                           eval_mems = app.config['EVAL_COUNT'],
+                         memes_min = app.config['MIN_MEME_COUNT']), 500
 
 @app.errorhandler(403)
 def forbidden_error(error):
     """Handle 403 errors - Forbidden access"""
     return render_template('403.html',
-                           eval_mems = EVAL_COUNT,
-                         memes_min = MIN_MEME_COUNT), 403
+                           eval_mems = app.config['EVAL_COUNT'],
+                         memes_min = app.config['MIN_MEME_COUNT']), 403
 
 @app.errorhandler(413)
 def too_large_error(error):
     """Handle 413 errors - File too large"""
     return render_template('413.html',
-                           eval_mems = EVAL_COUNT,
-                         memes_min = MIN_MEME_COUNT), 413
+                           eval_mems = app.config['EVAL_COUNT'],
+                         memes_min = app.config['MIN_MEME_COUNT']), 413
 
 # Template context processor to make current_user available in all templates
 @app.context_processor
@@ -1747,5 +1744,7 @@ def inject_user():
     return dict(current_user=get_current_user())
 
 if __name__ == '__main__':
-    init_db()
-    app.run(debug=DEVELOPMENT)
+    # Initialize database
+    with app.app_context():
+        init_db()
+    app.run(debug=app.config['DEVELOPMENT'])

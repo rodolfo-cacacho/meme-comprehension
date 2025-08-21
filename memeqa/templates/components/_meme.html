@@ -1,6 +1,6 @@
 <!-- templates/_meme.html -->
 <div class="card h-100 shadow-sm">
-    <img src="{{ url_for('uploaded_file', filename=meme.filename) }}"
+    <img src="{{ url_for('memes.uploaded_file', filename=meme.filename) }}"
          class="card-img-top gallery-img"
          alt="{{ meme.original_filename }}"
          style="height: 250px; object-fit: cover;">

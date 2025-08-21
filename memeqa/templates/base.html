@@ -74,7 +74,7 @@
     <!-- Updated navigation section for base.html - Sign in only in dropdown -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
+            <a class="navbar-brand" href="{{ url_for('main.index') }}">
                 <i class="bi bi-emoji-smile"></i> MemeQA
             </a>
             
@@ -87,39 +87,33 @@
                 <!-- Main navigation -->
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('index') }}">
+                        <a class="nav-link" href="{{ url_for('main.index') }}">
                             <i class="bi bi-house-door"></i> Home
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('gallery') }}">
+                        <a class="nav-link" href="{{ url_for('memes.gallery') }}">
                             <i class="bi bi-images"></i> Gallery
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('evaluate') }}">
+                        <a class="nav-link" href="{{ url_for('evaluations.evaluate') }}">
                             <i class="bi bi-check-square"></i> Evaluate
-                            {% if current_user %}
-                                {% set eval_count = current_user.total_evaluations or 0 %}
-                                {% if eval_count < eval_mems %}
-                                    <span class="badge bg-warning nav-badge">{{ eval_count }}/ {{ eval_mems }}</span>
-                                {% endif %}
-                            {% endif %}
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('upload_file') }}">
+                        <a class="nav-link" href="{{ url_for('memes.upload_file') }}">
                             <i class="bi bi-upload"></i> Upload
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('stats') }}">
+                        <a class="nav-link" href="{{ url_for('main.stats') }}">
                             <i class="bi bi-bar-chart"></i> Stats
                         </a>
                     </li>
                     {% if development %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('analytics') }}">
+                        <a class="nav-link" href="{{ url_for('main.analytics') }}">
                             <i class="bi bi-graph-up"></i> Analytics
                         </a>
                     </li>
@@ -146,7 +140,7 @@
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
-                                    <a class="dropdown-item" href="{{ url_for('profile') }}">
+                                    <a class="dropdown-item" href="{{ url_for('auth.profile') }}">
                                         <i class="bi bi-person"></i> View Profile
                                     </a>
                                 </li>
@@ -169,7 +163,7 @@
                                 {% endif %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
-                                    <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+                                    <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
                                         <i class="bi bi-box-arrow-right"></i> Sign Out
                                     </a>
                                 </li>
@@ -198,7 +192,7 @@
                                     </button>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{{ url_for('register') }}">
+                                    <a class="dropdown-item" href="{{ url_for('auth.register') }}">
                                         <i class="bi bi-person-plus"></i> Join Research
                                     </a>
                                 </li>
@@ -243,7 +237,7 @@
                 </div>
                 <div class="modal-body">
                     <p class="mb-3">Enter your email to receive a secure login link:</p>
-                    <form method="post" action="{{ url_for('request_login') }}" id="quickLoginForm">
+                    <form method="post" action="{{ url_for('auth.request_login') }}" id="quickLoginForm">
                         <div class="mb-3">
                             <label for="quick_login_email" class="form-label">Email Address</label>
                             <input type="email" class="form-control" id="quick_login_email" name="login_email" 
@@ -263,7 +257,7 @@
                     </small>
                     <div>
                         <small class="text-muted">Don't have an account?</small>
-                        <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-sm">
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-person-plus"></i> Register
                         </a>
                     </div>
@@ -307,14 +301,14 @@
                     <i class="bi bi-info-circle"></i>
                     <strong>Welcome back, {{ current_user.name.split()[0] }}!</strong> 
                     You need {{ eval_mems - (current_user.total_evaluations or 0) }} more evaluations to unlock meme uploads.
-                    <a href="{{ url_for('evaluate') }}" class="btn btn-sm btn-outline-primary ms-2">Continue Evaluating</a>
+                    <a href="{{ url_for('evaluations.evaluate') }}" class="btn btn-sm btn-outline-primary ms-2">Continue Evaluating</a>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             {% elif current_user.total_submissions == 0 %}
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                     <i class="bi bi-check-circle"></i>
                     <strong>Great job!</strong> You've completed your evaluations. Ready to share your first meme?
-                    <a href="{{ url_for('upload_file') }}" class="btn btn-sm btn-outline-success ms-2">Upload Meme</a>
+                    <a href="{{ url_for('memes.upload_file') }}" class="btn btn-sm btn-outline-success ms-2">Upload Meme</a>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             {% endif %}
@@ -323,7 +317,7 @@
             <div class="alert alert-info alert-dismissible fade show" role="alert">
                 <i class="bi bi-person-plus"></i>
                 <strong>Join the research!</strong> Register to track your contributions and get updates on findings.
-                <a href="{{ url_for('register') }}" class="btn btn-sm btn-outline-info ms-2">Register</a>
+                <a href="{{ url_for('auth.register') }}" class="btn btn-sm btn-outline-info ms-2">Register</a>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         {% endif %}
@@ -345,13 +339,13 @@
                 <div class="col-md-3">
                     <h6>Quick Links</h6>
                     <ul class="list-unstyled small">
-                        <li><a href="{{ url_for('stats') }}" class="text-muted">Dataset Statistics</a></li>
+                        <li><a href="{{ url_for('main.stats') }}" class="text-muted">Dataset Statistics</a></li>
                         {% if development %}
-                        <li><a href="{{ url_for('analytics') }}" class="text-muted">Research Analytics</a></li>
-                        <li><a href="{{ url_for('export_data') }}" class="text-muted">Export Data</a></li>
+                        <li><a href="{{ url_for('main.analytics') }}" class="text-muted">Research Analytics</a></li>
+                        <li><a href="{{ url_for('main.export_data') }}" class="text-muted">Export Data</a></li>
                         {% endif %}
                         {% if not current_user %}
-                        <li><a href="{{ url_for('register') }}" class="text-muted">Join Research</a></li>
+                        <li><a href="{{ url_for('auth.register') }}" class="text-muted">Join Research</a></li>
                         {% endif %}
                     </ul>
                 </div>
