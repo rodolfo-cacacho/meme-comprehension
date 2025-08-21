@@ -1,6 +1,5 @@
 .env
 *.ipynb
 *__pycache__/
-memes/
 .DS_Store
 *.pyc

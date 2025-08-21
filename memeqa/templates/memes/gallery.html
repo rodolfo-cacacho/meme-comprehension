@@ -1,0 +1,189 @@
+<!-- templates/gallery.html -->
+{% extends "base.html" %}
+{% block title %}Gallery - MemeQA{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>🖼️ Meme Gallery</h1>
+    <a href="{{ url_for('main.index') }}" class="btn btn-primary">Back to Home</a>
+</div>
+
+{% if memes.items %}
+    <!-- Per Page Selector -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <label class="me-2">Memes per page:</label>
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('memes.gallery', page=1, per_page=4) }}" 
+                   class="btn btn-sm {% if per_page == 4 %}btn-primary{% else %}btn-outline-primary{% endif %}">4</a>
+                <a href="{{ url_for('memes.gallery', page=1, per_page=8) }}" 
+                   class="btn btn-sm {% if per_page == 8 %}btn-primary{% else %}btn-outline-primary{% endif %}">8</a>
+                <a href="{{ url_for('memes.gallery', page=1, per_page=16) }}" 
+                   class="btn btn-sm {% if per_page == 16 %}btn-primary{% else %}btn-outline-primary{% endif %}">16</a>
+            </div>
+        </div>
+        <div class="text-muted">
+            Total memes: {{ memes.total }}
+        </div>
+    </div>
+
+    <!-- Memes Grid -->
+    <div class="row">
+        {% set col_size = 6 if per_page == 4 else 3 %}
+        {% for meme in memes.items %}
+            <div class="col-md-6 col-lg-{{ col_size }} mb-4">
+                <div class="card h-100 shadow-sm meme-card">
+                    <img src="{{ url_for('memes.uploaded_file', filename=meme.filename) }}"
+                         class="card-img-top gallery-img"
+                         alt="{{ meme.original_filename }}"
+                         style="height: 250px; object-fit: cover;">
+                    <div class="card-body">
+                        <!-- Basic metadata only -->
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge bg-primary">ID: {{ meme.id }}</span>
+                            <span class="badge bg-secondary">{{ meme.platform_found or 'Unknown' }}</span>
+                        </div>
+                        
+                        <!-- Additional metadata badges -->
+                        <div class="mb-2">
+                            {% if meme.humor_type %}
+                                <span class="badge bg-warning text-dark me-1">{{ meme.humor_type }}</span>
+                            {% endif %}
+                            {% if meme.cultural_reach %}
+                                <span class="badge bg-info text-white me-1">{{ meme.cultural_reach }}</span>
+                            {% endif %}
+                            {% if meme.estimated_year %}
+                                <span class="badge bg-success text-white">{{ meme.estimated_year }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Origin info if available -->
+                        {% if meme.meme_origin_country and meme.meme_origin_country != 'Unknown' %}
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <i class="bi bi-geo-alt"></i> Origin: {{ meme.meme_origin_country }}
+                            </small>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Upload date -->
+                        <div class="mt-auto">
+                            <small class="text-muted">
+                                <i class="bi bi-calendar"></i> {{ meme.upload_date.date() if meme.upload_date else 'Unknown' }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if memes.pages > 1 %}
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            <!-- Previous button -->
+            <li class="page-item {% if not memes.has_prev %}disabled{% endif %}">
+                <a class="page-link" 
+                   href="{% if memes.has_prev %}{{ url_for('memes.gallery', page=memes.prev_num, per_page=per_page) }}{% else %}#{% endif %}"
+                   aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+
+            <!-- Page numbers -->
+            {% for page_num in memes.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                {% if page_num %}
+                    {% if page_num != memes.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('memes.gallery', page=page_num, per_page=per_page) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            <!-- Next button -->
+            <li class="page-item {% if not memes.has_next %}disabled{% endif %}">
+                <a class="page-link" 
+                   href="{% if memes.has_next %}{{ url_for('memes.gallery', page=memes.next_num, per_page=per_page) }}{% else %}#{% endif %}"
+                   aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+
+    <!-- Page info -->
+    {% if memes.total > 0 %}
+    <p class="text-center text-muted">
+        Showing {{ memes.first }} - {{ memes.last }} of {{ memes.total }} memes
+    </p>
+    {% endif %}
+
+{% else %}
+    <div class="text-center py-5">
+        <div class="display-1 text-muted mb-4">🎭</div>
+        <h3>No memes uploaded yet</h3>
+        <p class="text-muted">Be the first to contribute and upload some Memes!</p>
+        <a href="{{ url_for('memes.upload_file') }}" class="btn btn-primary">Get Started</a>
+    </div>
+{% endif %}
+
+<!-- Info card about gallery -->
+<div class="card mt-4 bg-light">
+    <div class="card-body">
+        <h5 class="card-title">📊 About This Gallery</h5>
+        <p class="card-text">
+            This gallery shows all memes in the dataset with basic metadata only. 
+            Descriptions and detailed classifications are hidden to prevent bias during evaluation.
+            Each meme includes humor type, cultural reach, time period, and origin when available.
+        </p>
+        <div class="row">
+            <div class="col-md-6">
+                <small class="text-muted">
+                    <strong>Badge Guide:</strong><br>
+                    <span class="badge bg-primary me-1">ID</span> Meme identifier<br>
+                    <span class="badge bg-secondary me-1">Platform</span> Where found<br>
+                    <span class="badge bg-warning text-dark me-1">Humor</span> Type of humor<br>
+                </small>
+            </div>
+            <div class="col-md-6">
+                <small class="text-muted">
+                    <span class="badge bg-info me-1">Reach</span> Cultural reach<br>
+                    <span class="badge bg-success me-1">Year</span> Time period<br>
+                    <i class="bi bi-geo-alt"></i> Geographic origin<br>
+                    <i class="bi bi-calendar"></i> Upload date
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.gallery-img {
+    transition: transform 0.2s;
+}
+.gallery-img:hover {
+    transform: scale(1.02);
+}
+.meme-card {
+    transition: box-shadow 0.2s;
+}
+.meme-card:hover {
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+}
+.badge {
+    font-size: 0.7em;
+}
+</style>
+{% endblock %}
