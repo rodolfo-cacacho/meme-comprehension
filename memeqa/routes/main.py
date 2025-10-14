@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, session, current_app, abort, jsonify, flash, redirect, url_for
 from memeqa.database import get_db
-from memeqa.utils import get_current_user
+from memeqa.utils import get_current_user,AppSession
 import uuid
 import json
 from datetime import datetime
@@ -319,3 +319,15 @@ def reset_session():
     session.clear()
     flash('Session reset! You can now start fresh.')
     return redirect(url_for('main.index'))
+
+@bp.route('/test_session')
+def test_session():
+    app_session = AppSession(get_current_user(get_db()))
+    return jsonify({
+        'uploads': app_session.upload_count,
+        'evals': app_session.eval_count,
+        'name': app_session.name,
+        'user_id': app_session.user_id,
+        'session_id': app_session.session_id,
+        'evaluation_accuracy': app_session.evaluation_accuracy
+    })

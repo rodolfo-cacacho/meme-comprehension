@@ -10,6 +10,9 @@ import base64
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from flask import session, current_app
+from memeqa.database import get_db
+
 
 def generate_login_token(email, secret_key):
     """Generate a secure login token for email"""
@@ -192,6 +195,98 @@ def should_prompt_upload(evaluations_count):
 def should_prompt_evaluate(uploads_count):
     """Check if user should be prompted to evaluate (every 5 uploads)"""
     return uploads_count > 0 and uploads_count % 5 == 0
+
+def list_to_string(items):
+    if not items:
+        return ""
+    if len(items) == 1:
+        return items[0]
+    return ", ".join(items[:-1]) + " or " + items[-1]
+
+class AppSession:
+    def __init__(self, current_user=None):
+        self.db = get_db()
+        self.current_user = current_user
+        self.session_id = session.get('session_id', str(uuid.uuid4()))
+        session['session_id'] = self.session_id  # Persist
+        self.user_id = current_user['id'] if current_user else None
+        self.name = current_user['name'] if current_user else 'Anonymous'
+        self._load_stats()
+
+    def _load_stats(self):
+        if self.current_user:
+            user = self.db.execute('SELECT total_submissions, total_evaluations, evaluation_accuracy FROM users WHERE id = ?', (self.user_id,)).fetchone()
+            self.upload_count = user['total_submissions'] if user else 0
+            self.eval_count = user['total_evaluations'] if user else 0
+            self.evaluation_accuracy = user['evaluation_accuracy'] if user else 0.0
+            self.max_upload = current_app.config['REG_MAX_UPLOAD']
+            self.max_eval = current_app.config['REG_MAX_EVAL']
+        else:
+            self.upload_count = self.db.execute('SELECT COUNT(*) as count FROM memes WHERE uploader_session = ? AND uploader_user_id IS NULL', (self.session_id,)).fetchone()['count'] or 0
+            self.eval_count = self.db.execute('SELECT COUNT(*) as count FROM evaluations WHERE session_id = ? AND user_id IS NULL', (self.session_id,)).fetchone()['count'] or 0
+            self.evaluation_accuracy = None  # Anon users don't have accuracy
+            self.max_upload = current_app.config['ANON_MAX_UPLOAD']
+            self.max_eval = current_app.config['ANON_MAX_EVAL']
+
+    def check_limits(self):
+        if self.current_user:
+            return {'can_upload': True, 'can_evaluate': True, 'reason': None}  # Unlimited
+        can_upload = self.upload_count < self.max_upload
+        can_evaluate = self.eval_count < self.max_eval
+        reason = 'Upload limit reached' if not can_upload else 'Evaluation limit reached' if not can_evaluate else None
+        return {'can_upload': can_upload, 'can_evaluate': can_evaluate, 'reason': reason}
+
+    def get_own_meme_ids(self):
+        if self.current_user:
+            memes = self.db.execute('SELECT id FROM memes WHERE uploader_user_id = ?', (self.user_id,)).fetchall()
+        else:
+            memes = self.db.execute('SELECT id FROM memes WHERE uploader_session = ? AND uploader_user_id IS NULL', (self.session_id,)).fetchall()
+        return set(m['id'] for m in memes)
+
+    def increment_upload(self):
+        if self.current_user:
+            self.db.execute('UPDATE users SET total_submissions = total_submissions + 1 WHERE id = ?', (self.user_id,))
+            self.db.commit()
+        self._load_stats()  # Refresh counts
+
+    def increment_evaluation(self):
+        if self.current_user:
+            self.db.execute('UPDATE users SET total_evaluations = total_evaluations + 1 WHERE id = ?', (self.user_id,))
+            self.db.commit()
+        self._load_stats()
+
+    def get_total_memes(self):
+        result = self.db.execute('SELECT COUNT(*) as count FROM memes').fetchone()
+        return result['count'] if result else 0
+
+    def get_available_memes(self):
+        own_meme_ids = self.get_own_meme_ids()
+        if not own_meme_ids:
+            result = self.db.execute('SELECT COUNT(*) as count FROM memes').fetchone()
+        else:
+            result = self.db.execute(
+                'SELECT COUNT(*) as count FROM memes WHERE id NOT IN ({})'.format(','.join('?' * len(own_meme_ids))),
+                tuple(own_meme_ids)
+            ).fetchone()
+        return result['count'] if result else 0
+
+    # def get_available_memes(self):
+    #     own_meme_ids = self.get_own_meme_ids()
+    #     evaluated_meme_ids = set(
+    #         m['meme_id'] for m in self.db.execute(
+    #             'SELECT meme_id FROM evaluations WHERE user_id = ? OR session_id = ?',
+    #             (self.user_id if self.current_user else None, self.session_id)
+    #         ).fetchall()
+    #     )
+    #     excluded_ids = own_meme_ids | evaluated_meme_ids
+    #     if not excluded_ids:
+    #         result = self.db.execute('SELECT COUNT(*) as count FROM memes').fetchone()
+    #     else:
+    #         result = self.db.execute(
+    #             'SELECT COUNT(*) as count FROM memes WHERE id NOT IN ({})'.format(','.join('?' * len(excluded_ids))),
+    #             tuple(excluded_ids)
+    #         ).fetchone()
+    #     return result['count'] if result else 0        
 
 class Pagination:
     def __init__(self, page, per_page, total_count):

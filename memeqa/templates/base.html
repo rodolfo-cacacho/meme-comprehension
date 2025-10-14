@@ -122,20 +122,20 @@
                 
                 <!-- User section -->
                 <ul class="navbar-nav">
-                    {% if current_user %}
+                    {% if app_session.current_user %}
                         <!-- Logged in user -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle user-info" href="#" id="userDropdown" 
                             role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <div class="user-avatar bg-success text-white">
-                                    {{ current_user.name[:1].upper() }}
+                                    {{ app_session.name[:1].upper() }}
                                 </div>
-                                <span class="d-none d-md-inline">{{ current_user.name.split()[0] }}</span>
+                                <span class="d-none d-md-inline">{{ app_session.name.split()[0] }}</span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                                 <li>
                                     <h6 class="dropdown-header">
-                                        <i class="bi bi-person-circle"></i> {{ current_user.name }}
+                                        <i class="bi bi-person-circle"></i> {{ app_session.name }}
                                     </h6>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
@@ -146,18 +146,18 @@
                                 </li>
                                 <li>
                                     <span class="dropdown-item-text small">
-                                        <i class="bi bi-upload"></i> Uploads: {{ current_user.total_submissions or 0 }}
+                                        <i class="bi bi-upload"></i> Uploads: {{ app_session.upload_count }}
                                     </span>
                                 </li>
                                 <li>
                                     <span class="dropdown-item-text small">
-                                        <i class="bi bi-check-circle"></i> Evaluations: {{ current_user.total_evaluations or 0 }}
+                                        <i class="bi bi-check-circle"></i> Evaluations: {{ app_session.eval_count }} / {{ app_session.get_available_memes() }}
                                     </span>
                                 </li>
-                                {% if current_user.evaluation_accuracy %}
+                                {% if app_session.evaluation_accuracy %}
                                 <li>
                                     <span class="dropdown-item-text small">
-                                        <i class="bi bi-bullseye"></i> Accuracy: {{ "%.1f"|format(current_user.evaluation_accuracy * 100) }}%
+                                        <i class="bi bi-bullseye"></i> Accuracy: {{ "%.1f"|format(app_session.evaluation_accuracy * 100) }}%
                                     </span>
                                 </li>
                                 {% endif %}
@@ -208,11 +208,13 @@
                                         <i class="bi bi-clock"></i> Session Progress
                                     </span>
                                 </li>
-                                {% if session.session_id %}
-                                    {% set session_evals = get_user_evaluation_count() if get_user_evaluation_count else 0 %}
+                                {% if app_session.session_id %}
                                     <li>
                                         <span class="dropdown-item-text small">
-                                            <i class="bi bi-check-circle"></i> Evaluations: {{ session_evals }}/{{ eval_mems }}
+                                            <i class="bi bi-check-circle"></i> Evaluations: {{ app_session.eval_count }} / {{ app_session.max_eval }} 
+                                        </span>
+                                        <span class="dropdown-item-text small">
+                                            <i class="bi bi-check-circle"></i> Uploads: {{ app_session.upload_count }} / {{ app_session.max_upload }}
                                         </span>
                                     </li>
                                 {% endif %}
@@ -225,7 +227,7 @@
     </nav>
 
     <!-- Quick Login Modal -->
-    {% if not current_user %}
+    {% if not app_session.current_user %}
     <div class="modal fade" id="quickLoginModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -295,16 +297,15 @@
         {% endwith %}
 
         <!-- User status banner (for important messages) -->
-        {% if current_user %}
-            {% if current_user.total_evaluations < eval_mems %}
+        {% if app_session.current_user %}
+            {% if app_session.eval_count < app_session.max_eval %}
                 <div class="alert alert-primary alert-dismissible fade show" role="alert">
                     <i class="bi bi-info-circle"></i>
-                    <strong>Welcome back, {{ current_user.name.split()[0] }}!</strong> 
-                    You need {{ eval_mems - (current_user.total_evaluations or 0) }} more evaluations to unlock meme uploads.
+                    <strong>Welcome back, {{ app_session.name.split()[0] }}!</strong> 
                     <a href="{{ url_for('evaluations.evaluate') }}" class="btn btn-sm btn-outline-primary ms-2">Continue Evaluating</a>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
-            {% elif current_user.total_submissions == 0 %}
+            {% elif app_session.eval_count >= app_session.max_eval %}
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                     <i class="bi bi-check-circle"></i>
                     <strong>Great job!</strong> You've completed your evaluations. Ready to share your first meme?
@@ -344,7 +345,7 @@
                         <li><a href="{{ url_for('main.analytics') }}" class="text-muted">Research Analytics</a></li>
                         <li><a href="{{ url_for('main.export_data') }}" class="text-muted">Export Data</a></li>
                         {% endif %}
-                        {% if not current_user %}
+                        {% if not app_session.current_user %}
                         <li><a href="{{ url_for('auth.register') }}" class="text-muted">Join Research</a></li>
                         {% endif %}
                     </ul>

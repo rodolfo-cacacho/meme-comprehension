@@ -1,161 +1,116 @@
 # memeqa/routes/evaluations.py
 from flask import Blueprint, render_template, redirect, url_for, flash, session, current_app, request
 from memeqa.database import get_db
-from memeqa.utils import get_current_user, check_anonymous_limits, should_prompt_upload
+from memeqa.utils import get_current_user,AppSession
 import json
 import uuid
 
 bp = Blueprint('evaluations', __name__)
 
-def get_or_create_session():
-    """Get or create session for tracking evaluations"""
-    if 'session_id' not in session:
-        session['session_id'] = str(uuid.uuid4())
-    return session['session_id']
 
-def get_user_evaluation_count():
-    """Get number of evaluations completed by current session or user"""
+def get_random_meme_for_evaluation(app_session):
+    """Get a random meme that the user hasn't uploaded"""
     db = get_db()
-    current_user = get_current_user(db)
-    session_id = get_or_create_session()
-    
-    if current_user:
-        count = db.execute(
-            'SELECT COUNT(*) as count FROM evaluations WHERE user_id = ?',
-            (current_user['id'],)
-        ).fetchone()['count']
-    else:
-        count = db.execute(
-            'SELECT COUNT(*) as count FROM evaluations WHERE session_id = ? AND user_id IS NULL',
-            (session_id,)
-        ).fetchone()['count']
-    
-    return count
+    own_meme_ids = app_session.get_own_meme_ids()
+    query = '''
+        SELECT * FROM memes 
+        WHERE humor_type IS NOT NULL 
+        AND emotions_conveyed IS NOT NULL 
+        AND id NOT IN ({})  -- Exclude user's own memes
+        ORDER BY RANDOM() LIMIT 1
+    '''.format(','.join('?' * len(own_meme_ids)) if own_meme_ids else '0')
 
-def get_available_memes_count():
-    """Get count of memes available for evaluation"""
-    db = get_db()
-    count = db.execute('SELECT COUNT(*) as count FROM memes').fetchone()['count']
-    return count
-
-def can_user_upload():
-    """Check if user can upload"""
-    evaluation_count = get_user_evaluation_count()
-    available_memes = get_available_memes_count()
-    return evaluation_count >= current_app.config['EVAL_COUNT'] or \
-           available_memes < current_app.config['MIN_MEME_COUNT']
-
-def get_random_meme_for_evaluation():
-    """Get a random meme that the user hasn't evaluated yet (and didn't upload)"""
-    db = get_db()
-    current_user = get_current_user(db)
-    session_id = get_or_create_session()
-    
-    if current_user:
-        # Registered users can't evaluate their own memes
-        meme = db.execute('''
-            SELECT * FROM memes 
-            WHERE humor_type IS NOT NULL 
-            AND emotions_conveyed IS NOT NULL 
-            AND uploader_user_id != ?  -- Exclude user's own memes
-            AND id NOT IN (
-                SELECT meme_id FROM evaluations WHERE user_id = ?
-            ) 
-            ORDER BY RANDOM() LIMIT 1
-        ''', (current_user['id'], current_user['id'])).fetchone()
-    else:
-        # Anonymous users can evaluate any meme they haven't evaluated
-        meme = db.execute('''
-            SELECT * FROM memes 
-            WHERE humor_type IS NOT NULL 
-            AND emotions_conveyed IS NOT NULL 
-            AND id NOT IN (
-                SELECT meme_id FROM evaluations 
-                WHERE session_id = ? AND user_id IS NULL
-            ) 
-            ORDER BY RANDOM() LIMIT 1
-        ''', (session_id,)).fetchone()
-    
+    meme = db.execute(query, tuple(own_meme_ids) if own_meme_ids else ()).fetchone()
     return meme
 
 @bp.route('/')
 def evaluate():
     """Show humor/emotion evaluation page with limits"""
-    EVAL_COUNT = current_app.config['EVAL_COUNT']
-    MIN_MEME_COUNT = current_app.config['MIN_MEME_COUNT']
-    
-    db = get_db()
-    current_user = get_current_user(db)
-    session_id = get_or_create_session()
-    
+
+    app_session = AppSession(get_current_user(get_db()))
+    config = current_app.config
+    limits = app_session.check_limits()
+
+
     # Check limits for anonymous users
-    if not current_user:
-        can_upload, can_evaluate, uploads, evaluations = check_anonymous_limits(db, session_id)
-        if not can_evaluate:
-            flash('You\'ve reached the limit of 5 evaluations. Please register or log in to continue!')
-            return redirect(url_for('auth.register'))
-    else:
-        # Check if registered user should be prompted to upload
-        if should_prompt_upload(current_user['total_evaluations']):
-            flash('🎉 Great job! You\'ve evaluated 10 memes. Consider uploading some of your own!')
-    
+    if not app_session.current_user and not limits['can_evaluate']:
+        flash('You\'ve reached the limit of {} evaluations. Please register or log in to continue!'.format(config['ANON_MAX_EVAL']))
+        return redirect(url_for('auth.register'))
+
+    # Check if registered user should be prompted to upload
+    if app_session.current_user and app_session.eval_count % config['PROMPT_UPLOAD_EVERY'] == 0:
+        flash('🎉 Great job! You\'ve evaluated {} memes. Consider uploading some of your own!'.format(config['PROMPT_UPLOAD_EVERY']))
+
     # Get counts
-    evaluation_count = get_user_evaluation_count()
-    available_memes = get_available_memes_count()
-    
+    evaluation_count = app_session.eval_count
+    available_memes = app_session.get_available_memes()
+
+    print(f"Evaluation limits: {limits}\ncounts: eval={evaluation_count}, memes={available_memes}")
+
     # Check if there are enough memes to evaluate
-    if available_memes < MIN_MEME_COUNT:
+    if available_memes < config['MIN_MEME_COUNT']:
         flash(f'Only {available_memes} memes available for evaluation. Help us by uploading more!')
         return redirect(url_for('memes.upload_file'))
-    
-    # Get a random meme to evaluate
-    meme = get_random_meme_for_evaluation()
-    
-    if not meme:
-        if current_user:
-            flash('No more memes available for you to evaluate. You may have evaluated all available memes or they are all your uploads!')
-        else:
-            flash('No more memes available for evaluation. You can now upload your own!')
-        return redirect(url_for('memes.upload_file'))
-    
-    return render_template('evaluations/evaluate.html', 
-                         meme=meme, 
-                         evaluation_count=evaluation_count,
-                         current_user=current_user,
-                         eval_mems=EVAL_COUNT,
-                         memes_min=MIN_MEME_COUNT)
 
-@bp.route('/submit', methods=['POST'])
-def submit_humor_emotion_evaluation():
-    """Submit humor and emotion evaluation"""
-    db = get_db()
-    current_user = get_current_user(db)
-    session_id = get_or_create_session()
-    
-    meme_id = request.form.get('meme_id')
-    evaluated_humor_type = request.form.get('humor_type')
-    evaluated_emotions = request.form.getlist('emotions')
-    evaluated_context_level = request.form.get('context_level', '')
-    evaluation_time = request.form.get('evaluation_time', 0, type=int)
-    confidence_level = request.form.get('confidence_level', 3, type=int)
-    
-    if not meme_id or not evaluated_humor_type or not evaluated_emotions:
-        flash('Please complete all required fields.')
-        return redirect(url_for('evaluations.evaluate'))
-    
-    # Get the meme to compare against
-    meme = db.execute('''
-        SELECT humor_type, emotions_conveyed 
-        FROM memes 
-        WHERE id = ?
-    ''', (meme_id,)).fetchone()
-    
+    # Get a random meme to evaluate
+    meme = get_random_meme_for_evaluation(app_session)
+
     if not meme:
-        flash('Meme not found.')
-        return redirect(url_for('evaluations.evaluate'))
+        if app_session.current_user:
+            flash('No more memes available for you to evaluate. You may have evaluated all available memes.')
+            return redirect(url_for('main.index'))
+        else:
+            flash('No more memes available. Please register to access more.')
+            return redirect(url_for('auth.register'))
     
-    # Calculate correctness scores
+    return render_template('evaluations/evaluate.html',
+                         meme=meme,
+                         evaluation_count=evaluation_count,
+                         eval_mems=config['EVAL_COUNT'],
+                         can_upload=app_session.check_limits()['can_upload'],
+                         development=config['DEVELOPMENT'])
+
+
+@bp.route('/process', methods=['POST'])
+def process_evaluation():
+    """Process humor/emotion evaluation submission"""
+    app_session = AppSession(get_current_user(get_db()))
+    config = current_app.config
+    
+    # Check limits for anonymous users
+    limits = app_session.check_limits()
+    if not app_session.current_user and not limits['can_evaluate']:
+        flash('You\'ve reached the evaluation limit. Please register to continue.')
+        return redirect(url_for('auth.register'))
+
     try:
+        meme_id = int(request.form.get('meme_id'))
+        evaluated_humor_type = request.form.get('humor_type')
+        evaluated_emotions = request.form.getlist('emotions[]')
+        evaluated_context_level = request.form.get('context_level')
+        confidence_level = int(request.form.get('confidence_level', 3))
+        evaluation_time = int(request.form.get('evaluation_time', 0))
+    except Exception as e:
+        flash('Invalid form data. Please try again.')
+        return redirect(url_for('evaluations.evaluate'))
+
+    db = get_db()
+    
+    try:
+        db.execute('BEGIN TRANSACTION')
+        
+        # Get original meme to compare against
+        meme = db.execute('''
+            SELECT humor_type, emotions_conveyed 
+            FROM memes 
+            WHERE id = ?
+        ''', (meme_id,)).fetchone()
+        
+        if not meme:
+            flash('Meme not found.')
+            return redirect(url_for('evaluations.evaluate'))
+        
+        # Calculate correctness scores
         # Check humor type match
         original_humor_type = meme['humor_type']
         matches_humor_type = (evaluated_humor_type == original_humor_type) if original_humor_type else None
@@ -188,8 +143,8 @@ def submit_humor_emotion_evaluation():
              confidence_level, evaluation_time_seconds) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
-            session_id, 
-            current_user['id'] if current_user else None, 
+            app_session.session_id, 
+            app_session.user_id, 
             meme_id, 
             1,  # Default value for chosen_description (legacy field)
             evaluated_humor_type,
@@ -202,23 +157,13 @@ def submit_humor_emotion_evaluation():
         ))
         
         # Update user stats if logged in
-        if current_user:
-            # Get user's evaluation count
-            user_eval_count = db.execute(
-                'SELECT COUNT(*) as count FROM evaluations WHERE user_id = ?',
-                (current_user['id'],)
-            ).fetchone()['count']
-            
-            # Update user's total evaluations
-            db.execute('''
-                UPDATE users 
-                SET total_evaluations = ?
-                WHERE id = ?
-            ''', (user_eval_count, current_user['id']))
+        if app_session.current_user:
+            app_session.increment_evaluation()
+        else:
+            # For anon, just refresh counts
+            app_session._load_stats()
         
         db.commit()
-        
-        evaluation_count = get_user_evaluation_count()
         
         # Provide feedback
         feedback_parts = []
@@ -238,7 +183,9 @@ def submit_humor_emotion_evaluation():
                 feedback_parts.append("🔍 Some emotion differences noted")
         
         feedback = " | ".join(feedback_parts) if feedback_parts else "Thanks for your evaluation!"
-        flash(f'{feedback} Progress: {evaluation_count}/{current_app.config["EVAL_COUNT"]} evaluations completed.')
+        progress_t = f'/{app_session.max_eval}' if not app_session.current_user else ''
+
+        flash(f'{feedback} Progress: {app_session.eval_count}{progress_t} evaluations completed.')
         
     except Exception as e:
         print(f"Error processing evaluation: {e}")
@@ -246,9 +193,7 @@ def submit_humor_emotion_evaluation():
         db.rollback()
         return redirect(url_for('evaluations.evaluate'))
     
-    evaluation_count = get_user_evaluation_count()
-    
-    if evaluation_count >= current_app.config['EVAL_COUNT']:
+    if app_session.eval_count >= config['EVAL_COUNT']:
         flash('🎉 Congratulations! You have completed all evaluations. You can now upload your own meme!')
         return redirect(url_for('memes.upload_file'))
     else:

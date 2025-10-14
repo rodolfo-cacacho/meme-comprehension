@@ -1,21 +1,10 @@
 # memeqa/routes/memes.py
 from flask import Blueprint, render_template, request, abort, send_from_directory, current_app, flash, redirect, url_for, session
 from memeqa.database import get_db
-from memeqa.utils import Pagination,allowed_file, save_uploaded_file, get_upload_folder,get_current_user
+# from memeqa.utils import Pagination,allowed_file, save_uploaded_file, get_upload_folder,get_current_user
+from memeqa.utils import Pagination, allowed_file, get_upload_folder, get_current_user, AppSession,save_uploaded_file,list_to_string
 import json
 
-
-def get_or_create_session():
-    """Get or create session for tracking"""
-    import uuid
-    if 'session_id' not in session:
-        session['session_id'] = str(uuid.uuid4())
-    return session['session_id']
-
-def get_current_user(db):
-    """Get current user from utils"""
-    from memeqa.utils import get_current_user as get_user
-    return get_user(db)
 
 bp = Blueprint('memes', __name__)
 
@@ -61,136 +50,91 @@ def gallery():
                          memes=pagination,
                          per_page=per_page)
 
-# Add this route to memes.py
+
 @bp.route('/upload', methods=['GET', 'POST'])
 def upload_file():
-    """Handle meme upload with limits and proper form handling"""
-    from memeqa.utils import check_anonymous_limits, should_prompt_evaluate, save_uploaded_file, allowed_file, get_upload_folder
-    from werkzeug.utils import secure_filename
-    import json
-    import uuid
-    
-    db = get_db()
-    current_user = get_current_user(db)
-    session_id = get_or_create_session()
-    
+    """Handle meme upload with improved validation and UX"""
+    app_session = AppSession(get_current_user(get_db()))
+    config = current_app.config
+    limits = app_session.check_limits()
+
     # Check limits for anonymous users
-    if not current_user:
-        can_upload, can_evaluate, uploads, evaluations = check_anonymous_limits(db, session_id)
-        if not can_upload:
-            flash('You\'ve already uploaded a meme. Please register or log in to upload more!')
-            return redirect(url_for('auth.register'))
-    else:
-        # Check if registered user should be prompted to evaluate
-        if should_prompt_evaluate(current_user['total_submissions']):
-            flash('🌟 Awesome! You\'ve uploaded 5 memes. Help evaluate other memes too!')
-    
+    if not app_session.current_user and not limits['can_upload']:
+        flash('You\'ve reached the limit of {} uploads. Please register or log in to upload more!'.format(config['ANON_MAX_UPLOAD']))
+        return redirect(url_for('auth.register'))
+
+    # Check if registered user should be prompted to evaluate
+    if app_session.current_user and app_session.upload_count % config['PROMPT_EVAL_EVERY'] == 0:
+        flash('🎉 Great job! You\'ve uploaded {} memes. Consider evaluating some more!'.format(config['PROMPT_EVAL_EVERY']))
+
     if request.method == 'POST':
-        # Check if file was uploaded
-        if 'file' not in request.files:
-            flash('No file selected')
-            return redirect(request.url)
-        
-        file = request.files['file']
-        
-        # Check if file is valid
-        allowed_extensions = current_app.config['ALLOWED_EXTENSIONS']
-        if file.filename == '' or not allowed_file(file.filename, allowed_extensions):
-            flash('Please select a valid image file (PNG, JPG, JPEG, or WebP).')
-            return redirect(request.url)
-        
-        # Extract form data
-        form_data = {
-            # Meme Information
-            'meme_origin_country': request.form.get('meme_origin_country', '').strip(),
-            'platform_found': request.form.get('platform_found', '').strip(),
-            
-            # Content Classification
-            'meme_content': request.form.get('meme_content', '').strip(),
-            'meme_template': request.form.get('meme_template', '').strip(),
-            'estimated_year': request.form.get('estimated_year', '').strip(),
-            'cultural_reach': request.form.get('cultural_reach', '').strip(),
-            'niche_community': request.form.get('niche_community', '').strip(),
-            
-            # Humor & Emotional Analysis
-            'humor_explanation': request.form.get('humor_explanation', '').strip(),
-            'humor_type': request.form.get('humor_type', '').strip(),
-            'emotions': request.form.getlist('emotions'),
-            
-            # Context & References
-            'cultural_references': request.form.get('cultural_references', '').strip(),
-            'context_required': request.form.get('context_required', '').strip(),
-            'age_group_target': request.form.get('age_group_target', '').strip(),
-            
-            # # Meme Description
-            # 'meme_description': request.form.get('meme_description', '').strip(),
-            
-            # Additional Data
-            'additional_notes': request.form.get('additional_notes', '').strip(),
-            'terms_agreement': request.form.get('terms_agreement') == 'on'
-        }
-        
-        # For anonymous users, get contributor info from form
-        if not current_user:
-            form_data['contributor_name'] = request.form.get('contributor_name', '').strip()
-            form_data['contributor_email'] = request.form.get('contributor_email', '').strip()
-            form_data['contributor_country'] = request.form.get('country_of_submission', '').strip()
-        
-        # Validate required fields
-        required_fields = [
-            'platform_found', 'meme_content', 'estimated_year',
-            'cultural_reach', 'humor_explanation', 'humor_type', 'context_required',
-            # 'meme_description'
-        ]
-        
-        # Add contributor country as required if not logged in
-        if not current_user:
-            required_fields.append('contributor_country')
-        
-        missing_fields = [field for field in required_fields if not form_data.get(field)]
-        
-        if missing_fields:
-            flash(f'Please fill in all required fields: {", ".join(missing_fields)}')
-            return redirect(request.url)
-        
-        # Validate emotions (at least one must be selected)
-        if not form_data['emotions']:
-            flash('Please select at least one emotion that the meme conveys.')
-            return redirect(request.url)
-        
-        # Validate terms agreement
-        if not form_data['terms_agreement']:
-            flash('Please agree to the terms before submitting.')
-            return redirect(request.url)
-        
-        # Validate niche community if cultural reach is "Niche"
-        if form_data['cultural_reach'] == 'Niche' and not form_data['niche_community']:
-            flash('Please specify the niche community since you selected "Niche" for cultural reach.')
-            return redirect(request.url)
-        
-        # Process and save file
-        upload_folder = get_upload_folder(current_app)
-        filename, original_filename = save_uploaded_file(file, upload_folder)
-        
-        # Convert emotions list to JSON
-        emotions_json = json.dumps(form_data['emotions'])
-        
-        # Use current user data if available, otherwise form data
-        if current_user:
-            contributor_name = current_user['name']
-            contributor_email = current_user['email']
-            contributor_country = current_user['country']
-            uploader_user_id = current_user['id']
-        else:
-            contributor_name = form_data.get('contributor_name', '')
-            contributor_email = form_data.get('contributor_email', '')
-            contributor_country = form_data.get('contributor_country', '')
-            uploader_user_id = None
-        
-        # Save to database
-        cursor = db.cursor()
+        # Initialize form_data for template rendering
+        form_data = {}
         
         try:
+            # Check if file was uploaded
+            if 'file' not in request.files:
+                flash('No file selected', 'error')
+                return render_template('memes/upload.html', 
+                                     current_user=app_session.current_user, 
+                                     form_data=form_data)
+            
+            file = request.files['file']
+            
+            # Check if file is valid
+            allowed_extensions = config['ALLOWED_EXTENSIONS']
+            if file.filename == '' or not allowed_file(file.filename, allowed_extensions):
+                flash(f'Please select a valid image file ({list_to_string(allowed_extensions)}).', 'error')
+                return render_template('memes/upload.html', 
+                                     current_user=app_session.current_user, 
+                                     form_data=form_data)
+            
+            # Check file size (16MB limit)
+            file.seek(0, 2)  # Seek to end
+            file_size = file.tell()
+            file.seek(0)     # Reset to beginning
+            
+            if file_size > 16 * 1024 * 1024:  # 16MB
+                flash('File size must be less than 16MB.', 'error')
+                return render_template('memes/upload.html', 
+                                     current_user=app_session.current_user, 
+                                     form_data=form_data)
+            
+            # Extract and clean form data
+            form_data = extract_and_validate_form_data(request.form)
+            
+            # Server-side validation (as backup to client-side)
+            validation_errors = validate_form_data(form_data, app_session.current_user)
+            
+            if validation_errors:
+                for error in validation_errors:
+                    flash(error, 'error')
+                return render_template('memes/upload.html', 
+                                     current_user=app_session.current_user, 
+                                     form_data=form_data)
+            
+            # Process and save file
+            upload_folder = get_upload_folder(current_app)
+            filename, original_filename = save_uploaded_file(file, upload_folder)
+            
+            # Convert emotions list to JSON
+            emotions_json = json.dumps(form_data['emotions'])
+            
+            # Use current user data if available, otherwise form data
+            if app_session.current_user:
+                contributor_name = app_session.name
+                contributor_email = app_session.current_user['email']
+                contributor_country = app_session.current_user['country']
+                uploader_user_id = app_session.user_id
+            else:
+                contributor_name = form_data.get('contributor_name', '')
+                contributor_email = form_data.get('contributor_email', '')
+                contributor_country = form_data.get('contributor_country', '')
+                uploader_user_id = None
+            
+            # Save to database
+            cursor = get_db().cursor()
+            
             cursor.execute('''
                 INSERT INTO memes (
                     filename, original_filename, contributor_name, contributor_email,
@@ -203,45 +147,122 @@ def upload_file():
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 filename, original_filename, contributor_name, contributor_email,
-                contributor_country, form_data['meme_origin_country'], form_data['platform_found'], 
-                session_id, uploader_user_id,
-                form_data['meme_content'], form_data['meme_template'], form_data['estimated_year'], 
-                form_data['cultural_reach'], form_data['niche_community'],
-                form_data['humor_explanation'], form_data['humor_type'], emotions_json,
-                form_data['cultural_references'], form_data['context_required'], form_data['age_group_target'],
-                form_data['additional_notes'], form_data['terms_agreement']
+                contributor_country, form_data.get('meme_origin_country', ''), 
+                form_data['platform_found'], app_session.session_id, uploader_user_id,
+                form_data['meme_content'], form_data.get('meme_template', ''), 
+                form_data['estimated_year'], form_data['cultural_reach'], 
+                form_data.get('niche_community', ''), form_data['humor_explanation'], 
+                form_data['humor_type'], emotions_json, 
+                form_data.get('cultural_references', ''), form_data['context_required'], 
+                form_data.get('age_group_target', ''), form_data.get('additional_notes', ''), 
+                form_data['terms_agreement']
             ))
             
             meme_id = cursor.lastrowid
             
             # Update user stats if logged in
-            if current_user:
-                cursor.execute('''
-                    UPDATE users 
-                    SET total_submissions = total_submissions + 1
-                    WHERE id = ?
-                ''', (current_user['id'],))
+            if app_session.current_user:
+                app_session.increment_upload()
             
-            db.commit()
-            flash('Meme uploaded and classified successfully! Thank you for your detailed contribution to our research.')
+            get_db().commit()
+            
+            flash('Meme uploaded and classified successfully! Thank you for your detailed contribution to our research.', 'success')
             
             # Check if we should prompt for evaluation
-            if current_user:
-                total_uploads = current_user['total_submissions'] + 1
-                if should_prompt_evaluate(total_uploads):
-                    flash('🎯 You\'ve uploaded 5 memes! Now help evaluate others to improve the dataset!')
+            if app_session.current_user and app_session.upload_count % config['PROMPT_EVAL_EVERY'] == 0:
+                flash('🎯 You\'ve uploaded {} memes! Now help evaluate others to improve the dataset!'.format(config['PROMPT_EVAL_EVERY']), 'info')
+            
+            return redirect(url_for('memes.gallery'))
             
         except Exception as e:
-            print(f"Database error: {e}")
-            flash('Error saving meme. Please try again.')
-            db.rollback()
-            return redirect(request.url)
-        
-        return redirect(url_for('memes.gallery'))
+            current_app.logger.error(f"Upload error: {e}")
+            get_db().rollback()
+            flash('An error occurred while uploading. Please try again.', 'error')
+            return render_template('memes/upload.html', 
+                                 current_user=app_session.current_user, 
+                                 form_data=form_data)
     
     # GET request - show upload form
-    # Pass current_user so template can conditionally show/hide fields
-    return render_template('memes/upload.html', current_user=current_user)
+    return render_template('memes/upload.html', current_user=app_session.current_user)
+
+
+def extract_and_validate_form_data(form):
+    """Extract and clean form data"""
+    return {
+        # Meme Information
+        'meme_origin_country': form.get('meme_origin_country', '').strip(),
+        'platform_found': form.get('platform_found', '').strip(),
+        
+        # Content Classification
+        'meme_content': form.get('meme_content', '').strip(),
+        'meme_template': form.get('meme_template', '').strip(),
+        'estimated_year': form.get('estimated_year', '').strip(),
+        'cultural_reach': form.get('cultural_reach', '').strip(),
+        'niche_community': form.get('niche_community', '').strip(),
+        
+        # Humor & Emotional Analysis
+        'humor_explanation': form.get('humor_explanation', '').strip(),
+        'humor_type': form.get('humor_type', '').strip(),
+        'emotions': form.getlist('emotions[]'),
+        
+        # Context & References
+        'cultural_references': form.get('cultural_references', '').strip(),
+        'context_required': form.get('context_required', '').strip(),
+        'age_group_target': form.get('age_group_target', '').strip(),
+        
+        # Additional
+        'additional_notes': form.get('additional_notes', '').strip(),
+        'terms_agreement': form.get('terms_agreement') == 'on',
+        
+        # Contributor info (for anon users)
+        'contributor_name': form.get('contributor_name', '').strip(),
+        'contributor_email': form.get('contributor_email', '').strip(),
+        'contributor_country': form.get('contributor_country', '').strip()
+    }
+
+
+def validate_form_data(form_data, current_user):
+    """Validate form data and return list of errors"""
+    errors = []
+    
+    # Required fields validation
+    required_fields = [
+        ('meme_content', 'Content description'),
+        ('meme_origin_country', 'Meme origin country'),
+        ('estimated_year', 'Estimated year'),
+        ('cultural_reach', 'Cultural reach'),
+        ('humor_explanation', 'Humor explanation'),
+        ('humor_type', 'Humor type'),
+        ('context_required', 'Context required'),
+        ('platform_found', 'Platform where found'),
+    ]
+    
+    for field, display_name in required_fields:
+        if not form_data.get(field):
+            errors.append(f'{display_name} is required')
+    
+    # Anonymous user specific validation
+    if not current_user:
+        if not form_data.get('contributor_country'):
+            errors.append('Country is required')
+    
+    # Emotions validation
+    if not form_data.get('emotions') or len(form_data['emotions']) == 0:
+        errors.append('Please select at least one emotion')
+    
+    # Terms agreement validation
+    if not form_data.get('terms_agreement'):
+        errors.append('You must agree to the terms to upload')
+    
+    # Niche community validation
+    if form_data.get('cultural_reach') == 'Niche Community' and not form_data.get('niche_community'):
+        errors.append('Please specify the niche community when selecting "Niche Community" for cultural reach')
+    
+    # Email validation (if provided)
+    if form_data.get('contributor_email') and '@' not in form_data['contributor_email']:
+        errors.append('Please provide a valid email address')
+    
+    return errors
 
 
 @bp.route('/uploaded_file/<filename>')

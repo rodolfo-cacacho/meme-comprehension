@@ -1,4 +1,3 @@
-<!-- Enhanced upload form with comprehensive meme classification -->
 {% extends "base.html" %}
 
 {% block title %}Upload Meme - MemeQA Enhanced{% endblock %}
@@ -13,9 +12,11 @@
         
         <p class="lead mb-4">Help us build a comprehensive meme understanding dataset by providing detailed classification information.</p>
         
+        <!-- Validation Alerts Container -->
+        <div id="validation-alerts" class="mb-3"></div>
+        
         <form method="post" enctype="multipart/form-data" id="memeUploadForm">
             <!-- User Information Section -->
-
             {% if not current_user %}
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-primary text-white">
@@ -27,34 +28,28 @@
                         <div class="col-md-6 mb-3">
                             <label for="contributor_name" class="form-label">Name/Username <span class="text-muted">(optional)</span></label>
                             <input type="text" class="form-control" id="contributor_name" name="contributor_name" 
-                                   placeholder="Your name or username">
+                                   placeholder="Your name or username" value="{{ form_data.contributor_name if form_data else '' }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="contributor_email" class="form-label">Email <span class="text-muted">(optional, for research updates)</span></label>
                             <input type="email" class="form-control" id="contributor_email" name="contributor_email" 
-                                   placeholder="your@email.com">
+                                   placeholder="your@email.com" value="{{ form_data.contributor_email if form_data else '' }}">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="country_of_submission" class="form-label">Country of Submission <span class="text-danger">*</span></label>
-                            <select class="form-select" id="country_of_submission" name="country_of_submission" required>
+                            <label for="contributor_country" class="form-label">Country <span class="text-danger">*</span></label>
+                            <select class="form-select" id="contributor_country" name="contributor_country" required>
                                 <option value="">Select your country...</option>
-                                <option value="Germany">Germany</option>
-                                <option value="United States">United States</option>
-                                <option value="United Kingdom">United Kingdom</option>
-                                <option value="France">France</option>
-                                <option value="Spain">Spain</option>
-                                <option value="Italy">Italy</option>
-                                <option value="Canada">Canada</option>
-                                <option value="Australia">Australia</option>
-                                <option value="Japan">Japan</option>
-                                <option value="South Korea">South Korea</option>
-                                <option value="China">China</option>
-                                <option value="India">India</option>
-                                <option value="Brazil">Brazil</option>
-                                <option value="Mexico">Mexico</option>
-                                <option value="Russia">Russia</option>
-                                <option value="Other">Other</option>
+                                {% if config.COUNTRIES is defined %}
+                                    {% for option in config.COUNTRIES %}
+                                        <option value="{{ option }}" {{ 'selected' if form_data and form_data.contributor_country == option else '' }}>
+                                            {{ option }}
+                                        </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="Unknown" selected>Error: COUNTRIES not defined</option>
+                                {% endif %}
                             </select>
+                            <div class="invalid-feedback"></div>
                         </div>
                     </div>
                 </div>
@@ -70,61 +65,48 @@
                     <div class="mb-3">
                         <label for="file" class="form-label">Choose Meme <span class="text-danger">*</span></label>
                         <input type="file" class="form-control" id="file" name="file" 
-                               accept="image/png,image/jpeg,image/jpg,image/gif" required>
-                        <div class="form-text">Supported formats: PNG, JPG, JPEG, WebP (max 16MB)</div>
+                               accept={{config.ACCEPT_FILE_TYPES}} required>
+                        <div class="form-text">Supported formats: {{ config.ALLOWED_EXTENSIONS | map('upper') | join(', ') }} (max 16MB)</div>
+                        <div class="invalid-feedback"></div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="meme_origin_country" class="form-label">Meme Origin Country <span class="text-muted">(optional)</span></label>
-                            <select class="form-select" id="meme_origin_country" name="meme_origin_country">
-                                <option value="">Select origin country...</option>
-                                <option value="Unknown">Unknown</option>
-                                <option value="Germany">Germany</option>
-                                <option value="United States">United States</option>
-                                <option value="United Kingdom">United Kingdom</option>
-                                <option value="France">France</option>
-                                <option value="Spain">Spain</option>
-                                <option value="Italy">Italy</option>
-                                <option value="Canada">Canada</option>
-                                <option value="Australia">Australia</option>
-                                <option value="Japan">Japan</option>
-                                <option value="South Korea">South Korea</option>
-                                <option value="China">China</option>
-                                <option value="India">India</option>
-                                <option value="Brazil">Brazil</option>
-                                <option value="Mexico">Mexico</option>
-                                <option value="Russia">Russia</option>
-                                <option value="Global/International">Global/International</option>
-                                <option value="Other">Other</option>
+                            <label for="meme_origin_country" class="form-label">Meme Origin Country <span class="text-danger">*</span></label>
+                            <select class="form-select" id="meme_origin_country" name="meme_origin_country" required>
+                                <option value="">Select Meme Country Origin...</option>
+                                {% if config.COUNTRIES_MEMES is defined %}
+                                    {% for option in config.COUNTRIES_MEMES %}
+                                        <option value="{{ option }}" {{ 'selected' if form_data and form_data.meme_origin_country == option else '' }}>
+                                            {{ option }}
+                                        </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="Unknown" selected>Error: COUNTRIES not defined</option>
+                                {% endif %}
                             </select>
-                            <div class="form-text">Where do you think this meme originated from?</div>
+                            <div class="invalid-feedback"></div>
                         </div>
                         
                         <div class="col-md-6 mb-3">
                             <label for="platform_found" class="form-label">Platform Where Found <span class="text-danger">*</span></label>
                             <select class="form-select" id="platform_found" name="platform_found" required>
-                                <option value="">Select platform...</option>
-                                <option value="Unknown">Unknown</option>
-                                <option value="Reddit">Reddit</option>
-                                <option value="Twitter/X">Twitter/X</option>
-                                <option value="Instagram">Instagram</option>
-                                <option value="TikTok">TikTok</option>
-                                <option value="Facebook">Facebook</option>
-                                <option value="Discord">Discord</option>
-                                <option value="4chan">4chan</option>
-                                <option value="9GAG">9GAG</option>
-                                <option value="Imgur">Imgur</option>
-                                <option value="YouTube">YouTube</option>
-                                <option value="WhatsApp">WhatsApp</option>
-                                <option value="Telegram">Telegram</option>
-                                <option value="Original Creation">Original Creation</option>
-                                <option value="Other">Other</option>
+                                <option value="">Select Platform...</option>
+                                {% if config.PLATFORM_OPTIONS is defined %}
+                                    {% for option in config.PLATFORM_OPTIONS %}
+                                        <option value="{{ option }}" {{ 'selected' if form_data and form_data.platform_found == option else '' }}>
+                                            {{ option }}
+                                        </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="Unknown" selected>Error: PLATFORM_OPTIONS not defined</option>
+                                {% endif %}
                             </select>
+                            <div class="invalid-feedback"></div>
                         </div>
                     </div>
                     
-                    <div id="imagePreview" class="text-center" style="display: none;">
-                        <img id="previewImg" class="img-fluid" style="max-height: 300px;">
+                    <div id="imagePreview" class="text-center mt-3" style="display: none;">
+                        <img id="previewImg" class="img-fluid border rounded" style="max-height: 300px;">
                     </div>
                 </div>
             </div>
@@ -132,57 +114,85 @@
             <!-- Content Classification Section -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-warning text-dark">
-                    <h4 class="mb-0">🔍 Content Classification</h4>
+                    <h4 class="mb-0">📝 Content Classification</h4>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-12 mb-3">
                             <label for="meme_content" class="form-label">Content Description <span class="text-danger">*</span></label>
                             <textarea class="form-control" id="meme_content" name="meme_content" 
-                                      rows="3" placeholder="Describe what is happening in this meme (literal content, characters, setting, etc.)" required></textarea>
+                                      rows="3" placeholder="Describe what is happening in this meme (literal content, characters, setting, etc.)" required>{{ form_data.meme_content if form_data else '' }}</textarea>
+                            <div class="invalid-feedback"></div>
+                        </div>
+
+                        <div class="col-md-12 mb-3">
+                            <label for="cultural_references" class="form-label">Cultural/Pop Culture References <span class="text-muted">(if any)</span></label>
+                            <textarea class="form-control" id="cultural_references" name="cultural_references" 
+                                      rows="2" placeholder="Movies, TV shows, celebrities, events, trends, etc. that this meme references">{{ form_data.cultural_references if form_data else '' }}</textarea>
                         </div>
                         
                         <div class="col-md-6 mb-3">
                             <label for="meme_template" class="form-label">Meme Template/Format <span class="text-muted">(if applicable)</span></label>
                             <input type="text" class="form-control" id="meme_template" name="meme_template" 
-                                   placeholder="e.g., Drake pointing, Distracted boyfriend, etc.">
+                                   placeholder="e.g., Drake pointing, Distracted boyfriend, etc." value="{{ form_data.meme_template if form_data else '' }}">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="context_required" class="form-label">Context Knowledge Required <span class="text-danger">*</span></label>
+                            <select class="form-select" id="context_required" name="context_required" required>
+                                <option value="">Select level...</option>
+                                {% if config.CONTEXT_LEVELS is defined %}
+                                    {% for key, value in config.CONTEXT_LEVELS.items() %}
+                                        <option value="{{ key }}" {{ 'selected' if form_data and form_data.context_required == key else '' }}>
+                                            {{ value }}
+                                        </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="Unknown" selected>Error: CONTEXT_LEVELS not defined</option>
+                                {% endif %}
+                            </select>
+                            <div class="invalid-feedback"></div>
                         </div>
                         
                         <div class="col-md-6 mb-3">
                             <label for="estimated_year" class="form-label">Estimated Year/Era <span class="text-danger">*</span></label>
                             <select class="form-select" id="estimated_year" name="estimated_year" required>
                                 <option value="">Select year range...</option>
-                                <option value="2024-2025">2024-2025 (Current)</option>
-                                <option value="2022-2023">2022-2023</option>
-                                <option value="2020-2021">2020-2021 (COVID Era)</option>
-                                <option value="2018-2019">2018-2019</option>
-                                <option value="2016-2017">2016-2017</option>
-                                <option value="2014-2015">2014-2015</option>
-                                <option value="2012-2013">2012-2013</option>
-                                <option value="2010-2011">2010-2011</option>
-                                <option value="2008-2009">2008-2009</option>
-                                <option value="Pre-2008">Pre-2008 (Classic Internet)</option>
-                                <option value="Unknown">Unknown</option>
+                                {% if config.TIME_RANGE_OPTIONS is defined %}
+                                    {% for option in config.TIME_RANGE_OPTIONS %}
+                                        <option value="{{ option }}" {{ 'selected' if form_data and form_data.estimated_year == option else '' }}>
+                                            {{ option }}
+                                        </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="Unknown" selected>Error: TIME_RANGE_OPTIONS not defined</option>
+                                {% endif %}
                             </select>
+                            <div class="invalid-feedback"></div>
                         </div>
                         
                         <div class="col-md-6 mb-3">
                             <label for="cultural_reach" class="form-label">Cultural Reach <span class="text-danger">*</span></label>
                             <select class="form-select" id="cultural_reach" name="cultural_reach" required>
                                 <option value="">Select reach...</option>
-                                <option value="Global">Global (understood worldwide)</option>
-                                <option value="Western">Western Culture</option>
-                                <option value="Regional">Regional (specific continent/region)</option>
-                                <option value="National">National (country-specific)</option>
-                                <option value="Local">Local (city/community specific)</option>
-                                <option value="Niche">Niche Community</option>
+                                {% if config.CULTURAL_REACH_OPTIONS is defined %}
+                                    {% for key, value in config.CULTURAL_REACH_OPTIONS.items() %}
+                                        <option value="{{ key }}" {{ 'selected' if form_data and form_data.cultural_reach == key else '' }}>
+                                            {{ value }}
+                                        </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="Unknown" selected>Error: CULTURAL_REACH_OPTIONS not defined</option>
+                                {% endif %}
                             </select>
+                            <div class="invalid-feedback"></div>
                         </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label for="niche_community" class="form-label">Niche Community <span class="text-muted">(if applicable)</span></label>
+
+                        <div class="col-md-6 mb-3" id="niche-community-group" style="{{ 'display: block;' if form_data and form_data.cultural_reach == 'Niche Community' else 'display: none;' }}">
+                            <label for="niche_community" class="form-label">Niche Community <span id="niche-required" class="text-danger" style="{{ 'display: inline;' if form_data and form_data.cultural_reach == 'Niche Community' else 'display: none;' }}">*</span></label>
                             <input type="text" class="form-control" id="niche_community" name="niche_community" 
-                                   placeholder="e.g., Gaming, Tech, Sports, Academic, etc.">
+                                   placeholder="e.g., Gaming, Tech, Sports, Academic, etc." value="{{ form_data.niche_community if form_data else '' }}">
+                            <div class="invalid-feedback"></div>
                         </div>
                     </div>
                 </div>
@@ -198,119 +208,84 @@
                         <div class="col-md-12 mb-3">
                             <label for="humor_explanation" class="form-label">Why is this humorous/relatable? <span class="text-danger">*</span></label>
                             <textarea class="form-control" id="humor_explanation" name="humor_explanation" 
-                                      rows="3" placeholder="Explain the joke, irony, relatability, or what makes this meme funny/engaging" required></textarea>
+                                      rows="3" placeholder="Explain the joke, irony, relatability, or what makes this meme funny/engaging" required>{{ form_data.humor_explanation if form_data else '' }}</textarea>
+                            <div class="invalid-feedback"></div>
                         </div>
                         
-                        <div class="col-md-6 mb-3">
-                            <label for="humor_type" class="form-label">Type of Humor <span class="text-danger">*</span></label>
-                            <select class="form-select" id="humor_type" name="humor_type" required>
-                                <option value="">Select humor type...</option>
-                                <option value="Irony/Sarcasm">Irony/Sarcasm</option>
-                                <option value="Relatability">Relatability</option>
-                                <option value="Absurd/Random">Absurd/Random</option>
-                                <option value="Wordplay/Puns">Wordplay/Puns</option>
-                                <option value="Visual Humor">Visual Humor</option>
-                                <option value="Dark Humor">Dark Humor</option>
-                                <option value="Self-deprecating">Self-deprecating</option>
-                                <option value="Social Commentary">Social Commentary</option>
-                                <option value="Pop Culture Reference">Pop Culture Reference</option>
-                                <option value="Wholesome">Wholesome</option>
-                                <option value="Not Humorous">Not Humorous</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Primary Emotions Conveyed <span class="text-danger">*</span></label>
+                        <!-- Humor Type Selection -->
+                        <div class="mb-4">
+                            <h5 class="card-title">😄 What type of humor does this meme have?</h5>
+                            <p class="card-text small text-muted mb-3">Select the humor type that best describes this meme:</p>
+                            
                             <div class="row">
-                                <div class="col-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="emotions" value="Joy" id="emotion_joy">
-                                        <label class="form-check-label" for="emotion_joy">😄 Joy</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="emotions" value="Frustration" id="emotion_frustration">
-                                        <label class="form-check-label" for="emotion_frustration">😤 Frustration</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="emotions" value="Confusion" id="emotion_confusion">
-                                        <label class="form-check-label" for="emotion_confusion">😕 Confusion</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="emotions" value="Pride" id="emotion_pride">
-                                        <label class="form-check-label" for="emotion_pride">😎 Pride</label>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="emotions" value="Nostalgia" id="emotion_nostalgia">
-                                        <label class="form-check-label" for="emotion_nostalgia">🥺 Nostalgia</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="emotions" value="Anxiety" id="emotion_anxiety">
-                                        <label class="form-check-label" for="emotion_anxiety">😰 Anxiety</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="emotions" value="Relief" id="emotion_relief">
-                                        <label class="form-check-label" for="emotion_relief">😌 Relief</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="emotions" value="Surprise" id="emotion_surprise">
-                                        <label class="form-check-label" for="emotion_surprise">😲 Surprise</label>
-                                    </div>
-                                </div>
+                                {% if config.HUMOR_TYPES is defined %}
+                                    {% if config.HUMOR_TYPES %}
+                                        {% for humor in config.HUMOR_TYPES %}
+                                            <div class="col-md-4 mb-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="humor_type" 
+                                                        value="{{ humor.type }}" id="humor_{{ loop.index }}"
+                                                        {{ 'checked' if form_data and form_data.humor_type == humor.type else '' }} required>
+                                                    <label class="form-check-label" for="humor_{{ loop.index }}">
+                                                        <strong>{{ humor.type }}</strong>
+                                                        {% if humor.description %}
+                                                            <br><small class="text-muted" title="{{ humor.description }}" data-bs-toggle="tooltip">{{ humor.description }}</small>
+                                                        {% endif %}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-warning">config.HUMOR_TYPES is empty. Please check configuration.</p>
+                                    {% endif %}
+                                {% else %}
+                                    <p class="text-danger">Error: config.HUMOR_TYPES is not defined in the template context.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Emotions Selection -->
+                        <div class="mb-4">
+                            <h5 class="card-title">😊 What emotions does this meme convey?</h5>
+                            <p class="card-text small text-muted mb-3">Select all emotions that apply (you can choose multiple):</p>
+                            
+                            <div class="row">
+                                {% if config.EMOTIONS_TYPES is defined %}
+                                    {% if config.EMOTIONS_TYPES %}
+                                        {% for emotion in config.EMOTIONS_TYPES %}
+                                            <div class="col-md-6 mb-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="emotions[]" 
+                                                        value="{{ emotion.emotion }}" id="emotion_{{ loop.index }}"
+                                                        {{ 'checked' if form_data and form_data.emotions and emotion.emotion in form_data.emotions else '' }}>
+                                                    <label class="form-check-label" for="emotion_{{ loop.index }}">
+                                                        {% if emotion.emoji %}<span class="me-1">{{ emotion.emoji }}</span>{% endif %}
+                                                        <strong>{{ emotion.emotion }}</strong>
+                                                        {% if emotion.description %}
+                                                            <br><small class="text-muted" title="{{ emotion.description }}" data-bs-toggle="tooltip">{{ emotion.description }}</small>
+                                                        {% endif %}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-warning">config.EMOTIONS_TYPES is empty. Please check configuration.</p>
+                                    {% endif %}
+                                {% else %}
+                                    <p class="text-danger">Error: config.EMOTIONS_TYPES is not defined in the template context.</p>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Context & References Section -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-secondary text-white">
-                    <h4 class="mb-0">🔗 Context & References</h4>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-12 mb-3">
-                            <label for="cultural_references" class="form-label">Cultural/Pop Culture References <span class="text-muted">(if any)</span></label>
-                            <textarea class="form-control" id="cultural_references" name="cultural_references" 
-                                      rows="2" placeholder="Movies, TV shows, celebrities, events, trends, etc. that this meme references"></textarea>
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label for="context_required" class="form-label">Context Knowledge Required <span class="text-danger">*</span></label>
-                            <select class="form-select" id="context_required" name="context_required" required>
-                                <option value="">Select level...</option>
-                                <option value="None">None (self-explanatory)</option>
-                                <option value="Basic Internet">Basic Internet Knowledge</option>
-                                <option value="Pop Culture">Pop Culture Awareness</option>
-                                <option value="Current Events">Current Events Knowledge</option>
-                                <option value="Specialized">Specialized Knowledge</option>
-                                <option value="Deep Context">Deep Context Required</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label for="age_group_target" class="form-label">Target Age Group <span class="text-muted">(approximate)</span></label>
-                            <select class="form-select" id="age_group_target" name="age_group_target">
-                                <option value="">Select age group...</option>
-                                <option value="Gen Z (1997-2012)">Gen Z (1997-2012)</option>
-                                <option value="Millennial (1981-1996)">Millennial (1981-1996)</option>
-                                <option value="Gen X (1965-1980)">Gen X (1965-1980)</option>
-                                <option value="Boomer (1946-1964)">Boomer (1946-1964)</option>
-                                <option value="All Ages">All Ages</option>
-                                <option value="Unknown">Unknown</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
+           
             <!-- Additional Notes Section -->
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
                     <label for="additional_notes" class="form-label">Additional Notes <span class="text-muted">(optional)</span></label>
                     <textarea class="form-control" id="additional_notes" name="additional_notes" 
-                              rows="3" placeholder="Any additional context, variations, or notes about this meme"></textarea>
+                              rows="3" placeholder="Any additional context, variations, or notes about this meme">{{ form_data.additional_notes if form_data else '' }}</textarea>
                 </div>
             </div>
             
@@ -318,18 +293,19 @@
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="terms_agreement" name="terms_agreement" required>
+                        <input class="form-check-input" type="checkbox" id="terms_agreement" name="terms_agreement" required {{ 'checked' if form_data and form_data.terms_agreement else '' }}>
                         <label class="form-check-label" for="terms_agreement">
                             <strong>I agree that:</strong> I have the right to share this image, it doesn't violate copyright, 
                             and I consent to its use for research purposes by THWS and CAIRO. <span class="text-danger">*</span>
                         </label>
+                        <div class="invalid-feedback"></div>
                     </div>
                 </div>
             </div>
             
             <!-- Submit Button -->
             <div class="text-center mb-4">
-                <button type="submit" class="btn btn-primary btn-lg px-5">
+                <button type="submit" class="btn btn-primary btn-lg px-5" id="submitBtn">
                     🚀 Submit Meme Classification
                 </button>
             </div>
@@ -368,46 +344,405 @@
 {% endif %}
 
 <script>
-// Image preview functionality
-document.getElementById('file').addEventListener('change', function(event) {
-    const file = event.target.files[0];
-    const preview = document.getElementById('imagePreview');
-    const previewImg = document.getElementById('previewImg');
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('memeUploadForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const alertsContainer = document.getElementById('validation-alerts');
     
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            preview.style.display = 'block';
+    // Image preview functionality
+    document.getElementById('file').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        const preview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+        
+        if (file) {
+            // Validate file size (16MB limit)
+            if (file.size > 16 * 1024 * 1024) {
+                showFieldError('file', 'File size must be less than 16MB');
+                this.value = '';
+                preview.style.display = 'none';
+                return;
+            }
+            
+            // Validate file type
+            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+            if (!validTypes.includes(file.type)) {
+                showFieldError('file', 'Please select a valid image file (PNG, JPG, JPEG, or WebP)');
+                this.value = '';
+                preview.style.display = 'none';
+                return;
+            }
+            
+            // Clear any previous error and show preview
+            clearFieldError('file');
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.style.display = 'none';
+        }
+    });
+    
+    // Dynamic form interactions
+    document.getElementById('cultural_reach').addEventListener('change', function() {
+        const nicheGroup = document.getElementById('niche-community-group');
+        const nicheField = document.getElementById('niche_community');
+        const nicheRequired = document.getElementById('niche-required');
+        
+        if (this.value === 'Niche Community') {
+            nicheGroup.style.display = 'block';
+            nicheField.required = true;
+            nicheRequired.style.display = 'inline';
+        } else {
+            nicheGroup.style.display = 'none';
+            nicheField.required = false;
+            nicheRequired.style.display = 'none';
+            clearFieldError('niche_community');
+        }
+    });
+    
+    // Real-time validation for required fields
+    const requiredFields = ['file', 'platform_found', 'meme_content', 'estimated_year', 'cultural_reach', 
+                           'humor_explanation', 'humor_type', 'context_required','meme_origin_country',
+                        'contributor_country'];
+    
+    requiredFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.addEventListener('blur', function() {
+                validateField(fieldId);
+            });
+            
+            // Clear error on input
+            field.addEventListener('input', function() {
+                if (this.classList.contains('is-invalid')) {
+                    clearFieldError(fieldId);
+                }
+            });
+        }
+    });
+    
+    // Form submission with comprehensive validation
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Clear previous alerts and errors
+        clearAllErrors();
+        
+        const errors = [];
+        let isValid = true;
+        
+        // Validate required fields
+        requiredFields.forEach(fieldId => {
+            if (!validateField(fieldId)) {
+                isValid = false;
+            }
+        });
+        
+        // Special validation for anonymous users
+        if (!{{ 'true' if current_user else 'false' }}) {
+            if (!validateField('contributor_country')) {
+                isValid = false;
+            }
+        }
+        
+        // Validate emotions
+        const emotions = document.querySelectorAll('input[name="emotions[]"]:checked');
+        if (emotions.length === 0) {
+            showFieldError('emotions-container', 'Please select at least one emotion');
+            errors.push('Please select at least one emotion');
+            isValid = false;
+        }
+        
+        // Validate terms agreement
+        const termsCheckbox = document.getElementById('terms_agreement');
+        if (!termsCheckbox.checked) {
+            showFieldError('terms_agreement', 'You must agree to the terms to upload');
+            errors.push('You must agree to the terms');
+            isValid = false;
+        }
+        
+        // Validate niche community if "Niche Community" is selected
+        const culturalReach = document.getElementById('cultural_reach').value;
+        if (culturalReach === 'Niche Community') {
+            if (!validateField('niche_community')) {
+                isValid = false;
+                errors.push('Please specify the niche community');
+            }
+        }
+        
+        // If there are validation errors, show them and don't submit
+        if (!isValid) {
+            showValidationAlert(errors);
+            
+            // Scroll to first error
+            const firstErrorField = document.querySelector('.is-invalid');
+            if (firstErrorField) {
+                firstErrorField.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+            }
+            
+            return false;
+        }
+        
+        // If validation passes, show loading state and submit
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
+        submitBtn.disabled = true;
+        
+        // Submit the form
+        this.submit();
+    });
+    
+    function validateField(fieldId) {
+        const field = document.getElementById(fieldId);
+        if (!field) return true;
+        
+        let isValid = true;
+        let errorMessage = '';
+        
+        if (field.hasAttribute('required') && !field.value.trim()) {
+            isValid = false;
+            errorMessage = `${getFieldLabel(fieldId)} is required`;
+        }
+        
+        if (isValid) {
+            clearFieldError(fieldId);
+        } else {
+            showFieldError(fieldId, errorMessage);
+        }
+        
+        return isValid;
+    }
+    
+    function showFieldError(fieldId, message) {
+        const field = document.getElementById(fieldId);
+        const feedback = field ? field.parentElement.querySelector('.invalid-feedback') : null;
+        
+        if (field) {
+            field.classList.add('is-invalid');
+        }
+        
+        if (feedback) {
+            feedback.textContent = message;
+            feedback.style.display = 'block';
+        }
+    }
+    
+    function clearFieldError(fieldId) {
+        const field = document.getElementById(fieldId);
+        const feedback = field ? field.parentElement.querySelector('.invalid-feedback') : null;
+        
+        if (field) {
+            field.classList.remove('is-invalid');
+        }
+        
+        if (feedback) {
+            feedback.textContent = '';
+            feedback.style.display = 'none';
+        }
+    }
+    
+    function clearAllErrors() {
+        document.querySelectorAll('.is-invalid').forEach(field => {
+            field.classList.remove('is-invalid');
+        });
+        
+        document.querySelectorAll('.invalid-feedback').forEach(feedback => {
+            feedback.textContent = '';
+            feedback.style.display = 'none';
+        });
+        
+        alertsContainer.innerHTML = '';
+    }
+    
+    function showValidationAlert(errors) {
+        const alertHtml = `
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <h6><i class="bi bi-exclamation-triangle"></i> Please fix the following issues:</h6>
+                <ul class="mb-0 ps-3">
+                    ${errors.map(error => `<li>${error}</li>`).join('')}
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        alertsContainer.innerHTML = alertHtml;
+        alertsContainer.scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    function getFieldLabel(fieldId) {
+        const labels = {
+            'file': 'Image file',
+            'contributor_country': 'Country',
+            'platform_found': 'Platform where found',
+            'meme_origin_country': 'Country where Meme was found',
+            'meme_content': 'Content description',
+            'estimated_year': 'Estimated year',
+            'cultural_reach': 'Cultural reach',
+            'niche_community': 'Niche community',
+            'humor_explanation': 'Humor explanation',
+            'humor_type': 'Humor type',
+            'context_required': 'Context required'
         };
-        reader.readAsDataURL(file);
-    } else {
-        preview.style.display = 'none';
+        return labels[fieldId] || fieldId.replace('_', ' ');
     }
-});
-
-// Ensure at least one emotion is selected
-document.getElementById('memeUploadForm').addEventListener('submit', function(event) {
-    const emotions = document.querySelectorAll('input[name="emotions"]:checked');
-    if (emotions.length === 0) {
-        event.preventDefault();
-        alert('Please select at least one emotion that the meme conveys.');
-        return false;
-    }
-});
-
-// Dynamic form interactions
-document.getElementById('cultural_reach').addEventListener('change', function() {
-    const nicheField = document.getElementById('niche_community');
-    const nicheLabel = document.querySelector('label[for="niche_community"]');
     
-    if (this.value === 'Niche') {
-        nicheField.required = true;
-        nicheLabel.innerHTML = 'Niche Community <span class="text-danger">*</span>';
-    } else {
-        nicheField.required = false;
-        nicheLabel.innerHTML = 'Niche Community <span class="text-muted">(if applicable)</span>';
+    // Auto-save form data to sessionStorage (as backup)
+    function saveFormData() {
+        const formData = new FormData(form);
+        const data = {};
+        
+        for (let [key, value] of formData.entries()) {
+            if (key === 'emotions[]') {
+                if (!data.emotions) data.emotions = [];
+                data.emotions.push(value);
+            } else if (key !== 'file') {  // Don't save file data
+                data[key] = value;
+            }
+        }
+        
+        sessionStorage.setItem('memeUploadForm', JSON.stringify(data));
     }
+    
+    // Save form data periodically
+    setInterval(saveFormData, 30000); // Save every 30 seconds
+    
+    // Save on form changes
+    form.addEventListener('input', saveFormData);
+    form.addEventListener('change', saveFormData);
 });
 </script>
+
+<style>
+/* Custom styles for improved validation UX */
+.is-invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+.invalid-feedback {
+    display: none;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
+}
+
+.invalid-feedback.d-block {
+    display: block !important;
+}
+
+/* Enhanced form styling */
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.card-header {
+    font-weight: 600;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+/* Image preview styling */
+#imagePreview {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 0.375rem;
+}
+
+#previewImg {
+    border: 2px solid #dee2e6;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Loading button animation */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Alert styling */
+.alert ul {
+    margin-bottom: 0;
+}
+
+.alert ul li {
+    margin-bottom: 0.25rem;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .card-header h4 {
+        font-size: 1.1rem;
+    }
+    
+    .lead {
+        font-size: 1rem;
+    }
+    
+    .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+    }
+}
+
+/* Focus improvements for accessibility */
+.form-control:focus,
+.form-select:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.form-check-input:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Smooth transitions */
+.card,
+.form-control,
+.form-select,
+.btn {
+    transition: all 0.15s ease-in-out;
+}
+
+/* Improved checkbox styling */
+.form-check {
+    margin-bottom: 0.5rem;
+}
+
+.form-check-label {
+    cursor: pointer;
+    font-weight: 400;
+}
+
+/* Enhanced submit button */
+#submitBtn {
+    min-width: 200px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#submitBtn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+#submitBtn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+</style>
 {% endblock %}
