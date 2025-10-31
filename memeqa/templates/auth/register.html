@@ -33,51 +33,66 @@
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label for="country" class="form-label">Country <span class="text-danger">*</span></label>
-                            <select class="form-select" id="country" name="country" required>
-                                <option value="">Select your country...</option>
-                                <option value="Germany">Germany</option>
-                                <option value="United States">United States</option>
-                                <option value="United Kingdom">United Kingdom</option>
-                                <option value="France">France</option>
-                                <option value="Spain">Spain</option>
-                                <option value="Italy">Italy</option>
-                                <option value="Canada">Canada</option>
-                                <option value="Australia">Australia</option>
-                                <option value="Japan">Japan</option>
-                                <option value="South Korea">South Korea</option>
-                                <option value="China">China</option>
-                                <option value="India">India</option>
-                                <option value="Brazil">Brazil</option>
-                                <option value="Mexico">Mexico</option>
-                                <option value="Russia">Russia</option>
-                                <option value="Other">Other</option>
-                            </select>
+                            <input type="text" class="form-control" id="country" name="country" list="country-list" 
+                                   placeholder="Type or select your country" required>
+                            <datalist id="country-list">
+                                {% for country in config.COUNTRIES %}
+                                    <option value="{{ country }}">
+                                {% endfor %}
+                            </datalist>
+                            <div class="form-text">Start typing for suggestions.</div>
+                            <div class="invalid-feedback" id="country-error">Please select a valid country from the list.</div>
                         </div>
                         
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Languages <span class="text-danger">*</span></label>
+                            <div id="languages-container" class="form-check-list" style="max-height: 150px; overflow-y: auto; border: 1px solid #ced4da; padding: 10px; border-radius: 4px;">
+                                {% for language in config.LANGUAGES %}
+                                    <div class="form-check">
+                                        <input class="form-check-input language-checkbox" type="checkbox" name="languages" value="{{ language }}" id="language-{{ language|lower|replace(' ', '-') }}">
+                                        <label class="form-check-label" for="language-{{ language|lower|replace(' ', '-') }}">
+                                            {{ language }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="invalid-feedback" id="languages-error">Please select at least one language.</div>
+                            <div class="form-text">Select one or more languages you speak.</div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="birth_year" class="form-label">Birth Year <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="birth_year" name="birth_year" 
+                                   placeholder="e.g., 1995" min="1900" max="2025" required>
+                            <div class="form-text">Enter the year you were born.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="affiliation" class="form-label">Affiliation <span class="text-muted">(optional)</span></label>
                             <input type="text" class="form-control" id="affiliation" name="affiliation" 
                                    placeholder="University, Company, etc.">
                         </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="research_interest" class="form-label">Research Interest <span class="text-muted">(optional)</span></label>
-                        <select class="form-select" id="research_interest" name="research_interest">
-                            <option value="">Select your primary interest...</option>
-                            <option value="Vision-Language Models">Vision-Language Models</option>
-                            <option value="Cultural AI">Cultural AI</option>
-                            <option value="Computational Humor">Computational Humor</option>
-                            <option value="Internet Culture">Internet Culture</option>
-                            <option value="AI Benchmarking">AI Benchmarking</option>
-                            <option value="Multimodal Learning">Multimodal Learning</option>
-                            <option value="Social Media Analysis">Social Media Analysis</option>
-                            <option value="Human-AI Interaction">Human-AI Interaction</option>
-                            <option value="General AI Research">General AI Research</option>
-                            <option value="Other">Other</option>
-                        </select>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="research_interest" class="form-label">Research Interest <span class="text-muted">(optional)</span></label>
+                            <select class="form-select" id="research_interest" name="research_interest">
+                                <option value="">Select your primary interest...</option>
+                                <option value="Vision-Language Models">Vision-Language Models</option>
+                                <option value="Cultural AI">Cultural AI</option>
+                                <option value="Computational Humor">Computational Humor</option>
+                                <option value="Internet Culture">Internet Culture</option>
+                                <option value="AI Benchmarking">AI Benchmarking</option>
+                                <option value="Multimodal Learning">Multimodal Learning</option>
+                                <option value="Social Media Analysis">Social Media Analysis</option>
+                                <option value="Human-AI Interaction">Human-AI Interaction</option>
+                                <option value="General AI Research">General AI Research</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
                     </div>
                     
                     <div class="mb-4">
@@ -114,7 +129,7 @@
                     </div>
                     
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary btn-lg">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitButton">
                             🚀 Join the Research
                         </button>
                         <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
@@ -168,29 +183,69 @@
 <script>
 // Form validation and enhancement
 document.getElementById('registrationForm').addEventListener('submit', function(e) {
+    let isValid = true;
+
     const email = document.getElementById('email').value;
     const name = document.getElementById('name').value;
-    const country = document.getElementById('country').value;
+    const countryInput = document.getElementById('country');
+    const country = countryInput.value;
+    const languagesCheckboxes = document.querySelectorAll('.language-checkbox:checked');
+    const birthYear = document.getElementById('birth_year').value;
+    const languagesContainer = document.getElementById('languages-container');
+    const submitBtn = document.getElementById('submitButton');
     
-    if (!email || !name || !country) {
-        e.preventDefault();
-        alert('Please fill in all required fields.');
-        return false;
+    // Validate country
+    const validCountries = Array.from(document.querySelectorAll('#country-list option')).map(opt => opt.value);
+    if (country && !validCountries.includes(country)) {
+        countryInput.classList.add('is-invalid');
+        document.getElementById('country-error').style.display = 'block';
+        isValid = false;
+    } else {
+        countryInput.classList.remove('is-invalid');
+        document.getElementById('country-error').style.display = 'none';
+    }
+    
+    // Validate at least one language
+    if (languagesCheckboxes.length === 0) {
+        languagesContainer.classList.add('is-invalid');
+        document.getElementById('languages-error').style.display = 'block';
+        isValid = false;
+    } else {
+        languagesContainer.classList.remove('is-invalid');
+        document.getElementById('languages-error').style.display = 'none';
+    }
+    
+    if (!email || !name || !country || !birthYear) {
+        isValid = false;
     }
     
     if (!document.getElementById('privacy_agreement').checked) {
-        e.preventDefault();
         alert('Please agree to the privacy terms to continue.');
+        isValid = false;
+    }
+    
+    // Validate birth year
+    if (birthYear) {
+        const year = parseInt(birthYear);
+        const currentYear = new Date().getFullYear();
+        if (year < 1900 || year > currentYear) {
+            alert('Please enter a valid birth year between 1900 and ' + currentYear + '.');
+            isValid = false;
+        }
+    }
+    
+    if (!isValid) {
+        e.preventDefault();
+        alert('Please fill in all required fields, including at least one language.');
         return false;
     }
     
-    // Show success message
-    const submitBtn = this.querySelector('button[type="submit"]');
+    // Only disable button and show registering state if all validations pass
     submitBtn.innerHTML = '⏳ Registering...';
     submitBtn.disabled = true;
 });
 
-// Email validation
+// Email validation on blur
 document.getElementById('email').addEventListener('blur', function() {
     const email = this.value;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -208,6 +263,34 @@ document.getElementById('email').addEventListener('blur', function() {
         const feedback = this.parentNode.querySelector('.invalid-feedback');
         if (feedback) feedback.remove();
     }
+});
+
+// Country validation on blur
+document.getElementById('country').addEventListener('blur', function() {
+    const country = this.value;
+    const validCountries = Array.from(document.querySelectorAll('#country-list option')).map(opt => opt.value);
+    if (country && !validCountries.includes(country)) {
+        this.classList.add('is-invalid');
+        document.getElementById('country-error').style.display = 'block';
+    } else {
+        this.classList.remove('is-invalid');
+        document.getElementById('country-error').style.display = 'none';
+    }
+});
+
+// Language validation on checkbox change
+document.querySelectorAll('.language-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const languagesCheckboxes = document.querySelectorAll('.language-checkbox:checked');
+        const languagesContainer = document.getElementById('languages-container');
+        if (languagesCheckboxes.length === 0) {
+            languagesContainer.classList.add('is-invalid');
+            document.getElementById('languages-error').style.display = 'block';
+        } else {
+            languagesContainer.classList.remove('is-invalid');
+            document.getElementById('languages-error').style.display = 'none';
+        }
+    });
 });
 </script>
 {% endblock %}

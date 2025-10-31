@@ -37,19 +37,20 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="contributor_country" class="form-label">Country <span class="text-danger">*</span></label>
-                            <select class="form-select" id="contributor_country" name="contributor_country" required>
-                                <option value="">Select your country...</option>
-                                {% if config.COUNTRIES is defined %}
-                                    {% for option in config.COUNTRIES %}
-                                        <option value="{{ option }}" {{ 'selected' if form_data and form_data.contributor_country == option else '' }}>
-                                            {{ option }}
-                                        </option>
-                                    {% endfor %}
-                                {% else %}
-                                    <option value="Unknown" selected>Error: COUNTRIES not defined</option>
-                                {% endif %}
-                            </select>
-                            <div class="invalid-feedback"></div>
+                            <input type="text" class="form-control" id="contributor_country" name="contributor_country" list="country-list" 
+                                   placeholder="Type or select your country" required>
+                            <datalist id="country-list">
+                                {% for country in config.COUNTRIES %}
+                                    <option value="{{ country }}">
+                                {% endfor %}
+                            </datalist>
+                            <div class="form-text">Start typing for suggestions.</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="birth_year" class="form-label">Birth Year <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="birth_year" name="birth_year" 
+                                   placeholder="e.g., 2000" min="1900" max="2025" required>
+                            <div class="form-text">Enter the year you were born.</div>
                         </div>
                     </div>
                 </div>
@@ -70,21 +71,21 @@
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="row">
+
                         <div class="col-md-6 mb-3">
-                            <label for="meme_origin_country" class="form-label">Meme Origin Country <span class="text-danger">*</span></label>
-                            <select class="form-select" id="meme_origin_country" name="meme_origin_country" required>
-                                <option value="">Select Meme Country Origin...</option>
-                                {% if config.COUNTRIES_MEMES is defined %}
-                                    {% for option in config.COUNTRIES_MEMES %}
-                                        <option value="{{ option }}" {{ 'selected' if form_data and form_data.meme_origin_country == option else '' }}>
-                                            {{ option }}
-                                        </option>
-                                    {% endfor %}
-                                {% else %}
-                                    <option value="Unknown" selected>Error: COUNTRIES not defined</option>
-                                {% endif %}
-                            </select>
-                            <div class="invalid-feedback"></div>
+                            <label class="form-label">Meme Languages <span class="text-danger">*</span></label>
+                            <div id="languages-input" class="form-check-list" style="max-height: 150px; overflow-y: auto; border: 1px solid #ced4da; padding: 10px; border-radius: 4px;">
+                                {% for language in config.LANGUAGES %}
+                                    <div class="form-check">
+                                        <input class="form-check-input language-checkbox" type="checkbox" name="languages" value="{{ language }}" id="language-{{ language|lower|replace(' ', '-') }}">
+                                        <label class="form-check-label" for="language-{{ language|lower|replace(' ', '-') }}">
+                                            {{ language }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="invalid-feedback" id="languages-error">Please select at least one language.</div>
+                            <div class="form-text">Select the Meme's language or languages.</div>
                         </div>
                         
                         <div class="col-md-6 mb-3">
@@ -111,93 +112,6 @@
                 </div>
             </div>
 
-            <!-- Content Classification Section -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-warning text-dark">
-                    <h4 class="mb-0">📝 Content Classification</h4>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-12 mb-3">
-                            <label for="meme_content" class="form-label">Content Description <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="meme_content" name="meme_content" 
-                                      rows="3" placeholder="Describe what is happening in this meme (literal content, characters, setting, etc.)" required>{{ form_data.meme_content if form_data else '' }}</textarea>
-                            <div class="invalid-feedback"></div>
-                        </div>
-
-                        <div class="col-md-12 mb-3">
-                            <label for="cultural_references" class="form-label">Cultural/Pop Culture References <span class="text-muted">(if any)</span></label>
-                            <textarea class="form-control" id="cultural_references" name="cultural_references" 
-                                      rows="2" placeholder="Movies, TV shows, celebrities, events, trends, etc. that this meme references">{{ form_data.cultural_references if form_data else '' }}</textarea>
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label for="meme_template" class="form-label">Meme Template/Format <span class="text-muted">(if applicable)</span></label>
-                            <input type="text" class="form-control" id="meme_template" name="meme_template" 
-                                   placeholder="e.g., Drake pointing, Distracted boyfriend, etc." value="{{ form_data.meme_template if form_data else '' }}">
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label for="context_required" class="form-label">Context Knowledge Required <span class="text-danger">*</span></label>
-                            <select class="form-select" id="context_required" name="context_required" required>
-                                <option value="">Select level...</option>
-                                {% if config.CONTEXT_LEVELS is defined %}
-                                    {% for key, value in config.CONTEXT_LEVELS.items() %}
-                                        <option value="{{ key }}" {{ 'selected' if form_data and form_data.context_required == key else '' }}>
-                                            {{ value }}
-                                        </option>
-                                    {% endfor %}
-                                {% else %}
-                                    <option value="Unknown" selected>Error: CONTEXT_LEVELS not defined</option>
-                                {% endif %}
-                            </select>
-                            <div class="invalid-feedback"></div>
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label for="estimated_year" class="form-label">Estimated Year/Era <span class="text-danger">*</span></label>
-                            <select class="form-select" id="estimated_year" name="estimated_year" required>
-                                <option value="">Select year range...</option>
-                                {% if config.TIME_RANGE_OPTIONS is defined %}
-                                    {% for option in config.TIME_RANGE_OPTIONS %}
-                                        <option value="{{ option }}" {{ 'selected' if form_data and form_data.estimated_year == option else '' }}>
-                                            {{ option }}
-                                        </option>
-                                    {% endfor %}
-                                {% else %}
-                                    <option value="Unknown" selected>Error: TIME_RANGE_OPTIONS not defined</option>
-                                {% endif %}
-                            </select>
-                            <div class="invalid-feedback"></div>
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label for="cultural_reach" class="form-label">Cultural Reach <span class="text-danger">*</span></label>
-                            <select class="form-select" id="cultural_reach" name="cultural_reach" required>
-                                <option value="">Select reach...</option>
-                                {% if config.CULTURAL_REACH_OPTIONS is defined %}
-                                    {% for key, value in config.CULTURAL_REACH_OPTIONS.items() %}
-                                        <option value="{{ key }}" {{ 'selected' if form_data and form_data.cultural_reach == key else '' }}>
-                                            {{ value }}
-                                        </option>
-                                    {% endfor %}
-                                {% else %}
-                                    <option value="Unknown" selected>Error: CULTURAL_REACH_OPTIONS not defined</option>
-                                {% endif %}
-                            </select>
-                            <div class="invalid-feedback"></div>
-                        </div>
-
-                        <div class="col-md-6 mb-3" id="niche-community-group" style="{{ 'display: block;' if form_data and form_data.cultural_reach == 'Niche Community' else 'display: none;' }}">
-                            <label for="niche_community" class="form-label">Niche Community <span id="niche-required" class="text-danger" style="{{ 'display: inline;' if form_data and form_data.cultural_reach == 'Niche Community' else 'display: none;' }}">*</span></label>
-                            <input type="text" class="form-control" id="niche_community" name="niche_community" 
-                                   placeholder="e.g., Gaming, Tech, Sports, Academic, etc." value="{{ form_data.niche_community if form_data else '' }}">
-                            <div class="invalid-feedback"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Humor & Emotion Analysis Section -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-info text-white">
@@ -206,27 +120,28 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-12 mb-3">
-                            <label for="humor_explanation" class="form-label">Why is this humorous/relatable? <span class="text-danger">*</span></label>
+                            <label for="humor_explanation" class="form-label">Why is this humorous/relatable? <span class="text-muted">(optional)</span></label>
                             <textarea class="form-control" id="humor_explanation" name="humor_explanation" 
-                                      rows="3" placeholder="Explain the joke, irony, relatability, or what makes this meme funny/engaging" required>{{ form_data.humor_explanation if form_data else '' }}</textarea>
+                                      rows="3" placeholder="Explain the joke, irony, relatability, or what makes this meme funny/engaging">{{ form_data.humor_explanation if form_data else '' }}</textarea>
                             <div class="invalid-feedback"></div>
                         </div>
                         
-                        <!-- Humor Type Selection -->
+                        <!-- Humor Selection -->
                         <div class="mb-4">
-                            <h5 class="card-title">😄 What type of humor does this meme have?</h5>
-                            <p class="card-text small text-muted mb-3">Select the humor type that best describes this meme:</p>
+                            <h5 class="card-title">😊 What humor does this meme express?</h5>
+                            <p class="card-text small text-muted mb-3">Select all type of humor that apply (you can choose multiple):</p>
                             
                             <div class="row">
                                 {% if config.HUMOR_TYPES is defined %}
                                     {% if config.HUMOR_TYPES %}
                                         {% for humor in config.HUMOR_TYPES %}
-                                            <div class="col-md-4 mb-3">
+                                            <div class="col-md-6 mb-3">
                                                 <div class="form-check">
-                                                    <input class="form-check-input" type="radio" name="humor_type" 
+                                                    <input class="form-check-input" type="checkbox" name="humors[]" 
                                                         value="{{ humor.type }}" id="humor_{{ loop.index }}"
-                                                        {{ 'checked' if form_data and form_data.humor_type == humor.type else '' }} required>
+                                                        {{ 'checked' if form_data and form_data.humors and humor.type in form_data.emotions else '' }}>
                                                     <label class="form-check-label" for="humor_{{ loop.index }}">
+                                                        {% if humor.emoji %}<span class="me-1">{{ humor.emoji }}</span>{% endif %}
                                                         <strong>{{ humor.type }}</strong>
                                                         {% if humor.description %}
                                                             <br><small class="text-muted" title="{{ humor.description }}" data-bs-toggle="tooltip">{{ humor.description }}</small>
@@ -242,7 +157,7 @@
                                     <p class="text-danger">Error: config.HUMOR_TYPES is not defined in the template context.</p>
                                 {% endif %}
                             </div>
-                        </div>
+                        </div>                        
 
                         <!-- Emotions Selection -->
                         <div class="mb-4">
@@ -276,19 +191,41 @@
                                 {% endif %}
                             </div>
                         </div>
+                        <!-- Cultural Knowledge/ Context -->
+                        <div class="col-md-12 mb-3">
+                            <label for="context_referenec" class="form-label">How much cultural knowledge is needed to understand this meme?</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="context_level" id="context1" value="Universal">
+                                <label class="btn btn-outline-success" for="context1">
+                                    <strong>Universal</strong><br>
+                                    <small>Anyone can understand</small>
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="context_level" id="context2" value="Basic Internet">
+                                <label class="btn btn-outline-info" for="context2">
+                                    <strong>Basic Internet</strong><br>
+                                    <small>Need basic web culture</small>
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="context_level" id="context3" value="Pop Culture">
+                                <label class="btn btn-outline-warning" for="context3">
+                                    <strong>Pop Culture</strong><br>
+                                    <small>Need cultural references</small>
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="context_level" id="context4" value="Specialized">
+                                <label class="btn btn-outline-danger" for="context4">
+                                    <strong>Specialized</strong><br>
+                                    <small>Need specific knowledge</small>
+                                </label>
+                            </div>
+                        </div>
+
+
                     </div>
                 </div>
             </div>
            
-            <!-- Additional Notes Section -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <label for="additional_notes" class="form-label">Additional Notes <span class="text-muted">(optional)</span></label>
-                    <textarea class="form-control" id="additional_notes" name="additional_notes" 
-                              rows="3" placeholder="Any additional context, variations, or notes about this meme">{{ form_data.additional_notes if form_data else '' }}</textarea>
-                </div>
-            </div>
-            
             <!-- Terms Agreement -->
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
@@ -344,187 +281,54 @@
 {% endif %}
 
 <script>
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Cache DOM elements
     const form = document.getElementById('memeUploadForm');
     const submitBtn = document.getElementById('submitBtn');
     const alertsContainer = document.getElementById('validation-alerts');
+    const fileInput = document.getElementById('file');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
     
-    // Image preview functionality
-    document.getElementById('file').addEventListener('change', function(event) {
-        const file = event.target.files[0];
-        const preview = document.getElementById('imagePreview');
-        const previewImg = document.getElementById('previewImg');
-        
-        if (file) {
-            // Validate file size (16MB limit)
-            if (file.size > 16 * 1024 * 1024) {
-                showFieldError('file', 'File size must be less than 16MB');
-                this.value = '';
-                preview.style.display = 'none';
-                return;
-            }
-            
-            // Validate file type
-            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-            if (!validTypes.includes(file.type)) {
-                showFieldError('file', 'Please select a valid image file (PNG, JPG, JPEG, or WebP)');
-                this.value = '';
-                preview.style.display = 'none';
-                return;
-            }
-            
-            // Clear any previous error and show preview
-            clearFieldError('file');
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                previewImg.src = e.target.result;
-                preview.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        } else {
-            preview.style.display = 'none';
-        }
-    });
+    // Configuration
+    const CONFIG = {
+        maxFileSize: 16 * 1024 * 1024, // 16MB
+        validImageTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
+        autoSaveInterval: 30000, // 30 seconds
+        birthYearMin: 1900,
+        birthYearMax: new Date().getFullYear()
+    };
     
-    // Dynamic form interactions
-    document.getElementById('cultural_reach').addEventListener('change', function() {
-        const nicheGroup = document.getElementById('niche-community-group');
-        const nicheField = document.getElementById('niche_community');
-        const nicheRequired = document.getElementById('niche-required');
-        
-        if (this.value === 'Niche Community') {
-            nicheGroup.style.display = 'block';
-            nicheField.required = true;
-            nicheRequired.style.display = 'inline';
-        } else {
-            nicheGroup.style.display = 'none';
-            nicheField.required = false;
-            nicheRequired.style.display = 'none';
-            clearFieldError('niche_community');
-        }
-    });
+    // Field labels mapping
+    const FIELD_LABELS = {
+        'file': 'Image file',
+        'contributor_country': 'Country',
+        'birth_year': 'Birth year',
+        'platform_found': 'Platform where found',
+        'languages-input': 'Languages',
+        'humors-container': 'Humor types',
+        'emotions-container': 'Emotions',
+        'context_level': 'Context level',
+        'terms_agreement': 'Terms agreement'
+    };
     
-    // Real-time validation for required fields
-    const requiredFields = ['file', 'platform_found', 'meme_content', 'estimated_year', 'cultural_reach', 
-                           'humor_explanation', 'humor_type', 'context_required','meme_origin_country',
-                        'contributor_country'];
+    // ==================== HELPER FUNCTIONS ====================
     
-    requiredFields.forEach(fieldId => {
-        const field = document.getElementById(fieldId);
-        if (field) {
-            field.addEventListener('blur', function() {
-                validateField(fieldId);
-            });
-            
-            // Clear error on input
-            field.addEventListener('input', function() {
-                if (this.classList.contains('is-invalid')) {
-                    clearFieldError(fieldId);
-                }
-            });
-        }
-    });
-    
-    // Form submission with comprehensive validation
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Clear previous alerts and errors
-        clearAllErrors();
-        
-        const errors = [];
-        let isValid = true;
-        
-        // Validate required fields
-        requiredFields.forEach(fieldId => {
-            if (!validateField(fieldId)) {
-                isValid = false;
-            }
-        });
-        
-        // Special validation for anonymous users
-        if (!{{ 'true' if current_user else 'false' }}) {
-            if (!validateField('contributor_country')) {
-                isValid = false;
-            }
-        }
-        
-        // Validate emotions
-        const emotions = document.querySelectorAll('input[name="emotions[]"]:checked');
-        if (emotions.length === 0) {
-            showFieldError('emotions-container', 'Please select at least one emotion');
-            errors.push('Please select at least one emotion');
-            isValid = false;
-        }
-        
-        // Validate terms agreement
-        const termsCheckbox = document.getElementById('terms_agreement');
-        if (!termsCheckbox.checked) {
-            showFieldError('terms_agreement', 'You must agree to the terms to upload');
-            errors.push('You must agree to the terms');
-            isValid = false;
-        }
-        
-        // Validate niche community if "Niche Community" is selected
-        const culturalReach = document.getElementById('cultural_reach').value;
-        if (culturalReach === 'Niche Community') {
-            if (!validateField('niche_community')) {
-                isValid = false;
-                errors.push('Please specify the niche community');
-            }
-        }
-        
-        // If there are validation errors, show them and don't submit
-        if (!isValid) {
-            showValidationAlert(errors);
-            
-            // Scroll to first error
-            const firstErrorField = document.querySelector('.is-invalid');
-            if (firstErrorField) {
-                firstErrorField.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'center' 
-                });
-            }
-            
-            return false;
-        }
-        
-        // If validation passes, show loading state and submit
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
-        submitBtn.disabled = true;
-        
-        // Submit the form
-        this.submit();
-    });
-    
-    function validateField(fieldId) {
-        const field = document.getElementById(fieldId);
-        if (!field) return true;
-        
-        let isValid = true;
-        let errorMessage = '';
-        
-        if (field.hasAttribute('required') && !field.value.trim()) {
-            isValid = false;
-            errorMessage = `${getFieldLabel(fieldId)} is required`;
-        }
-        
-        if (isValid) {
-            clearFieldError(fieldId);
-        } else {
-            showFieldError(fieldId, errorMessage);
-        }
-        
-        return isValid;
+    function getFieldLabel(fieldId) {
+        return FIELD_LABELS[fieldId] || fieldId.replace(/_/g, ' ');
     }
     
     function showFieldError(fieldId, message) {
         const field = document.getElementById(fieldId);
-        const feedback = field ? field.parentElement.querySelector('.invalid-feedback') : null;
+        const feedback = field?.parentElement.querySelector('.invalid-feedback') || 
+                        document.getElementById(`${fieldId}-error`);
         
         if (field) {
             field.classList.add('is-invalid');
+        } else {
+            // For container elements (languages, humors, emotions, context_level)
+            document.getElementById(fieldId)?.classList.add('is-invalid');
         }
         
         if (feedback) {
@@ -535,10 +339,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function clearFieldError(fieldId) {
         const field = document.getElementById(fieldId);
-        const feedback = field ? field.parentElement.querySelector('.invalid-feedback') : null;
+        const feedback = field?.parentElement.querySelector('.invalid-feedback') || 
+                        document.getElementById(`${fieldId}-error`);
         
         if (field) {
             field.classList.remove('is-invalid');
+        } else {
+            document.getElementById(fieldId)?.classList.remove('is-invalid');
         }
         
         if (feedback) {
@@ -557,64 +364,383 @@ document.addEventListener('DOMContentLoaded', function() {
             feedback.style.display = 'none';
         });
         
-        alertsContainer.innerHTML = '';
+        if (alertsContainer) {
+            alertsContainer.innerHTML = '';
+        }
     }
     
-    function showValidationAlert(errors) {
+    function showValidationAlert(errors, alertType = 'alert-danger') {
+        if (!alertsContainer) return;
+        
+        const icon = alertType === 'alert-success' ? 'check-circle' : 'exclamation-triangle';
+        const title = alertType === 'alert-success' ? 'Success' : 'Please fix the following issues';
+        
         const alertHtml = `
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <h6><i class="bi bi-exclamation-triangle"></i> Please fix the following issues:</h6>
+            <div class="alert ${alertType} alert-dismissible fade show" role="alert">
+                <h6><i class="bi bi-${icon}"></i> ${title}:</h6>
                 <ul class="mb-0 ps-3">
                     ${errors.map(error => `<li>${error}</li>`).join('')}
                 </ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         `;
         alertsContainer.innerHTML = alertHtml;
-        alertsContainer.scrollIntoView({ behavior: 'smooth' });
+        alertsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     
-    function getFieldLabel(fieldId) {
-        const labels = {
-            'file': 'Image file',
-            'contributor_country': 'Country',
-            'platform_found': 'Platform where found',
-            'meme_origin_country': 'Country where Meme was found',
-            'meme_content': 'Content description',
-            'estimated_year': 'Estimated year',
-            'cultural_reach': 'Cultural reach',
-            'niche_community': 'Niche community',
-            'humor_explanation': 'Humor explanation',
-            'humor_type': 'Humor type',
-            'context_required': 'Context required'
-        };
-        return labels[fieldId] || fieldId.replace('_', ' ');
+    function validateField(fieldId) {
+        const field = document.getElementById(fieldId);
+        if (!field) return true;
+        
+        let isValid = true;
+        let errorMessage = '';
+        
+        // Check required fields
+        if (field.hasAttribute('required') && !field.value.trim()) {
+            isValid = false;
+            errorMessage = `${getFieldLabel(fieldId)} is required`;
+        }
+        
+        // Special validation for birth_year
+        if (fieldId === 'birth_year' && field.value) {
+            const year = parseInt(field.value, 10);
+            if (isNaN(year) || year < CONFIG.birthYearMin || year > CONFIG.birthYearMax) {
+                isValid = false;
+                errorMessage = `Birth year must be between ${CONFIG.birthYearMin} and ${CONFIG.birthYearMax}`;
+            }
+        }
+        
+        if (isValid) {
+            clearFieldError(fieldId);
+        } else {
+            showFieldError(fieldId, errorMessage);
+        }
+        
+        return isValid;
     }
     
-    // Auto-save form data to sessionStorage (as backup)
+    function validateFileInput(file) {
+        if (!file) {
+            return { isValid: false, error: 'Please select an image file' };
+        }
+        
+        // Validate file size
+        if (file.size > CONFIG.maxFileSize) {
+            return { 
+                isValid: false, 
+                error: `File size must be less than ${CONFIG.maxFileSize / (1024 * 1024)}MB` 
+            };
+        }
+        
+        // Validate file type
+        if (!CONFIG.validImageTypes.includes(file.type)) {
+            return { 
+                isValid: false, 
+                error: 'Please select a valid image file (PNG, JPG, JPEG, or WebP)' 
+            };
+        }
+        
+        return { isValid: true };
+    }
+    
+    function validateCheckboxGroup(selector, containerName) {
+        const checked = document.querySelectorAll(`${selector}:checked`);
+        const isValid = checked.length > 0;
+        
+        if (!isValid) {
+            showFieldError(containerName, `Please select at least one ${getFieldLabel(containerName).toLowerCase()}`);
+        } else {
+            clearFieldError(containerName);
+        }
+        
+        return isValid;
+    }
+    
+    function validateRadioGroup(name, containerId) {
+        const checked = document.querySelector(`input[name="${name}"]:checked`);
+        const isValid = checked !== null;
+        
+        if (!isValid) {
+            showFieldError(containerId, `Please select a ${getFieldLabel(containerId).toLowerCase()}`);
+        } else {
+            clearFieldError(containerId);
+        }
+        
+        return isValid;
+    }
+    
+    function setLoadingState(isLoading) {
+        if (isLoading) {
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Uploading...';
+            submitBtn.disabled = true;
+        } else {
+            submitBtn.innerHTML = '🚀 Submit Meme Classification';
+            submitBtn.disabled = false;
+        }
+    }
+    
     function saveFormData() {
+        if (!form) return;
+        
         const formData = new FormData(form);
         const data = {};
         
         for (let [key, value] of formData.entries()) {
-            if (key === 'emotions[]') {
-                if (!data.emotions) data.emotions = [];
-                data.emotions.push(value);
-            } else if (key !== 'file') {  // Don't save file data
+            if (key.includes('[]')) {
+                if (!data[key]) data[key] = [];
+                data[key].push(value);
+            } else if (key !== 'file') { // Don't save file data
                 data[key] = value;
             }
         }
         
-        sessionStorage.setItem('memeUploadForm', JSON.stringify(data));
+        try {
+            sessionStorage.setItem('memeUploadForm', JSON.stringify(data));
+        } catch (e) {
+            console.warn('Failed to save form data:', e);
+        }
     }
     
-    // Save form data periodically
-    setInterval(saveFormData, 30000); // Save every 30 seconds
+    function loadImagePreview(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            imagePreview.style.display = 'block';
+        };
+        reader.onerror = function() {
+            console.error('Failed to read file');
+            imagePreview.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    }
     
-    // Save on form changes
-    form.addEventListener('input', saveFormData);
-    form.addEventListener('change', saveFormData);
+    // ==================== EVENT HANDLERS ====================
+    
+    function handleFileChange(event) {
+        const file = event.target.files[0];
+        
+        if (!file) {
+            imagePreview.style.display = 'none';
+            return;
+        }
+        
+        const validation = validateFileInput(file);
+        
+        if (!validation.isValid) {
+            showFieldError('file', validation.error);
+            fileInput.value = '';
+            imagePreview.style.display = 'none';
+            return;
+        }
+        
+        clearFieldError('file');
+        loadImagePreview(file);
+    }
+    
+    function handleFieldBlur(fieldId) {
+        return function() {
+            validateField(fieldId);
+        };
+    }
+    
+    function handleFieldInput(fieldId) {
+        return function() {
+            if (this.classList.contains('is-invalid')) {
+                clearFieldError(fieldId);
+            }
+        };
+    }
+    
+    function handleLanguageChange() {
+        validateCheckboxGroup('.language-checkbox', 'languages-input');
+    }
+    
+    function handleContextLevelChange() {
+        clearFieldError('context_level');
+    }
+    
+    function preventEnterSubmit(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+        }
+    }
+    
+    async function handleFormSubmit(e) {
+        e.preventDefault();
+        
+        clearAllErrors();
+        
+        const errors = [];
+        let isValid = true;
+        
+        // Validate required text fields
+        const requiredFields = ['file', 'platform_found', 'contributor_country', 'birth_year'];
+        requiredFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field && !validateField(fieldId)) {
+                isValid = false;
+                errors.push(`${getFieldLabel(fieldId)} is required`);
+            }
+        });
+        
+        // Validate languages
+        if (!validateCheckboxGroup('.language-checkbox', 'languages-input')) {
+            isValid = false;
+            errors.push('Please select at least one language');
+        }
+        
+        // Validate humor types
+        if (!validateCheckboxGroup('input[name="humors[]"]', 'humors-container')) {
+            isValid = false;
+            errors.push('Please select at least one humor type');
+        }
+        
+        // Validate emotions
+        if (!validateCheckboxGroup('input[name="emotions[]"]', 'emotions-container')) {
+            isValid = false;
+            errors.push('Please select at least one emotion');
+        }
+        
+        // Validate context level
+        if (!validateRadioGroup('context_level', 'context_level')) {
+            isValid = false;
+            errors.push('Please select a context level');
+        }
+        
+        // Validate terms agreement
+        const termsCheckbox = document.getElementById('terms_agreement');
+        if (termsCheckbox && !termsCheckbox.checked) {
+            showFieldError('terms_agreement', 'You must agree to the terms to upload');
+            errors.push('You must agree to the terms');
+            isValid = false;
+        }
+        
+        // If validation fails, show errors and scroll to first error
+        if (!isValid) {
+            showValidationAlert(errors);
+            
+            const firstErrorField = document.querySelector('.is-invalid');
+            if (firstErrorField) {
+                firstErrorField.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+            }
+            
+            return false;
+        }
+        
+        // Submit form
+        setLoadingState(true);
+        
+        try {
+            const formData = new FormData(form);
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                const contentType = response.headers.get('content-type');
+                let errorMessage = `Upload failed: ${response.status} ${response.statusText}`;
+                
+                if (contentType && contentType.includes('application/json')) {
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.message || errorMessage;
+                    } catch (e) {
+                        // JSON parsing failed, use default message
+                    }
+                }
+                
+                throw new Error(errorMessage);
+            }
+            
+            // Try to parse JSON response, but handle if it's not JSON
+            let result = null;
+            const contentType = response.headers.get('content-type');
+            
+            if (contentType && contentType.includes('application/json')) {
+                result = await response.json();
+            }
+            
+            // Success - either redirect or show success message
+            if (response.redirected || response.url !== form.action) {
+                window.location.href = response.url;
+            } else {
+                showValidationAlert(['Upload successful!'], 'alert-success');
+                form.reset();
+                imagePreview.style.display = 'none';
+                sessionStorage.removeItem('memeUploadForm');
+            }
+            
+        } catch (error) {
+            console.error('Upload error:', error);
+            showValidationAlert([`Upload error: ${error.message}`], 'alert-danger');
+        } finally {
+            setLoadingState(false);
+        }
+    }
+    
+    // ==================== INITIALIZATION ====================
+    
+    function initializeEventListeners() {
+        // File input
+        if (fileInput) {
+            fileInput.addEventListener('change', handleFileChange);
+        }
+        
+        // Required fields validation
+        const requiredFieldIds = ['file', 'platform_found', 'contributor_country', 'birth_year'];
+        requiredFieldIds.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.addEventListener('blur', handleFieldBlur(fieldId));
+                field.addEventListener('input', handleFieldInput(fieldId));
+            }
+        });
+        
+        // Language checkboxes
+        document.querySelectorAll('.language-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', handleLanguageChange);
+        });
+        
+        // Context level radio buttons
+        document.querySelectorAll('input[name="context_level"]').forEach(radio => {
+            radio.addEventListener('change', handleContextLevelChange);
+        });
+        
+        // Prevent Enter key submission in languages input
+        const languagesInput = document.getElementById('languages-input');
+        if (languagesInput) {
+            languagesInput.addEventListener('keydown', preventEnterSubmit);
+        }
+        
+        // Form submission
+        if (form) {
+            form.addEventListener('submit', handleFormSubmit);
+            form.addEventListener('input', saveFormData);
+            form.addEventListener('change', saveFormData);
+        }
+    }
+    
+    function initializeTooltips() {
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltipTriggerList.forEach(tooltipTriggerEl => {
+            new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+    
+    function initializeAutoSave() {
+        setInterval(saveFormData, CONFIG.autoSaveInterval);
+    }
+    
+    // Start the application
+    initializeEventListeners();
+    initializeTooltips();
+    initializeAutoSave();
 });
+
 </script>
 
 <style>

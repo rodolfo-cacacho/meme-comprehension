@@ -184,3 +184,19 @@ class Config:
         'Specialized Knowledge':'Specialized Knowledge',
         'Deep Context':'Deep Context (very obscure references)'
     }
+
+    # Load countries from txt file
+    try:
+        with open('memeqa/static/countries.txt', 'r') as f:
+            COUNTRIES = sorted([line.strip() for line in f if line.strip()])
+    except FileNotFoundError:
+        COUNTRIES = []
+        print("Warning: countries.txt not found, country list empty.")
+
+    # Load languages from txt file
+    try:
+        with open('memeqa/static/languages.txt', 'r') as f:
+            LANGUAGES = sorted([line.strip() for line in f if line.strip()])
+    except FileNotFoundError:
+        LANGUAGES = []
+        print("Warning: languages.txt not found, language list empty.")

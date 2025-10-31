@@ -1,0 +1,20 @@
+Arabic
+Bengali
+Chinese (Mandarin)
+English
+French
+German
+Hindi
+Indonesian
+Italian
+Japanese
+Korean
+Malay
+Portuguese
+Punjabi
+Russian
+Spanish
+Swahili
+Tamil
+Urdu
+Vietnamese

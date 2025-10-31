@@ -38,7 +38,7 @@ def evaluate():
         return redirect(url_for('auth.register'))
 
     # Check if registered user should be prompted to upload
-    if app_session.current_user and app_session.eval_count % config['PROMPT_UPLOAD_EVERY'] == 0:
+    if app_session.current_user and app_session.eval_count % config['PROMPT_UPLOAD_EVERY'] == 0 and app_session.eval_count > 0:
         flash('🎉 Great job! You\'ve evaluated {} memes. Consider uploading some of your own!'.format(config['PROMPT_UPLOAD_EVERY']))
 
     # Get counts
@@ -58,7 +58,10 @@ def evaluate():
     if not meme:
         if app_session.current_user:
             flash('No more memes available for you to evaluate. You may have evaluated all available memes.')
-            return redirect(url_for('main.index'))
+            return redirect(url_for('memes.upload_file'))
+        if not app_session.current_user and limits['can_upload']:
+            flash('No more memes available. You can help by uploading some of your own!')
+            return redirect(url_for('memes.upload_file'))
         else:
             flash('No more memes available. Please register to access more.')
             return redirect(url_for('auth.register'))

@@ -2,6 +2,7 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, session, current_app
 from memeqa.database import get_db
 from memeqa.utils import get_current_user, generate_login_token, verify_login_token, send_email
+from datetime import datetime
 
 bp = Blueprint('auth', __name__)
 
@@ -12,6 +13,8 @@ def register():
         name = request.form.get('name', '').strip()
         email = request.form.get('email', '').strip().lower()
         country = request.form.get('country', '').strip()
+        languages = request.form.getlist('languages')  # Changed from .get() to .getlist()
+        birth_year = request.form.get('birth_year', '').strip()
         affiliation = request.form.get('affiliation', '').strip()
         research_interest = request.form.get('research_interest', '').strip()
         
@@ -21,12 +24,37 @@ def register():
         data_access = 1 if 'data_access' in request.form else 0
         
         # Validation
-        if not name or not email or not country:
-            flash('Please fill in all required fields.')
+        if not name or not email or not country or not languages or not birth_year:
+            flash('Please fill in all required fields, including at least one language.')
             return redirect(request.url)
         
         if 'privacy_agreement' not in request.form:
             flash('Please agree to the privacy terms.')
+            return redirect(request.url)
+        
+        # Validate country
+        if country not in current_app.config['COUNTRIES']:
+            flash('Warning: Country not in standard list.', 'warning')
+
+        # Validate languages
+        if not languages:  # languages is already a list from getlist()
+            flash('Please select at least one language.')
+            return redirect(request.url)
+
+        # Validate that selected languages are in the allowed list
+        invalid_languages = [lang for lang in languages if lang not in current_app.config['LANGUAGES']]
+        if invalid_languages:
+            flash(f'Warning: Invalid languages selected: {", ".join(invalid_languages)}', 'warning')
+        
+        # Validate birth year
+        try:
+            year = int(birth_year)
+            current_year = datetime.now().year
+            if year < 1900 or year > current_year:
+                flash(f'Please enter a valid birth year between 1900 and {current_year}.')
+                return redirect(request.url)
+        except ValueError:
+            flash('Invalid birth year format.')
             return redirect(request.url)
         
         # Check if email already exists
@@ -42,11 +70,11 @@ def register():
         cursor = db.cursor()
         cursor.execute('''
             INSERT INTO users 
-            (name, email, country, affiliation, research_interest, 
+            (name, email, country, languages, birth_year, affiliation, research_interest, 
              notify_updates, notify_milestones, data_access_interest,
              total_submissions, total_evaluations, evaluation_accuracy, is_active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0.0, 1)
-        ''', (name, email, country, affiliation, research_interest,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0.0, 1)
+        ''', (name, email, country, ','.join(languages), year, affiliation, research_interest,
               notify_updates, notify_milestones, data_access))
         
         db.commit()
@@ -136,7 +164,6 @@ def logout():
     flash('You have been logged out successfully.')
     return redirect(url_for('main.index'))
 
-# In memeqa/routes/auth.py
 @bp.route('/profile')
 def profile():
     """User profile page with safe data handling"""

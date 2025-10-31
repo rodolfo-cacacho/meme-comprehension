@@ -63,22 +63,22 @@
                     <input type="hidden" name="meme_id" value="{{ meme.id }}">
                     <input type="hidden" name="evaluation_time" id="evaluation_time" value="0">
 
-                    <!-- Humor Type Evaluation -->
+                    <!-- Humor Evaluation -->
                     <div class="card bg-light mb-4">
                         <div class="card-body">
                             <h5 class="card-title">😄 What type of humor is this?</h5>
-                            <p class="card-text small text-muted mb-3">Select the humor type that best describes this meme:</p>
-                            
+                            <p class="card-text small text-muted mb-3">Select all the humor types that apply (you can choose multiple):</p>
                             <div class="row">
                                 {% if config.HUMOR_TYPES is defined %}
                                     {% if config.HUMOR_TYPES %}
                                         {% for humor in config.HUMOR_TYPES %}
                                             <div class="col-md-6 mb-2">
                                                 <div class="form-check">
-                                                    <input class="form-check-input" type="radio" name="humor_type" 
+                                                    <input class="form-check-input" type="checkbox" name="humors[]" 
                                                         value="{{ humor.type }}" id="humor_{{ loop.index }}"
-                                                        {{ 'checked' if form_data and form_data.humor_type == humor.type else '' }} required>
+                                                        {{ 'checked' if form_data and form_data.humors and humor.type in form_data.humors else '' }}>
                                                     <label class="form-check-label" for="humor_{{ loop.index }}">
+                                                        {% if humor.emoji %}<span class="me-1">{{ humor.emoji }}</span>{% endif %}
                                                         <strong>{{ humor.type }}</strong>
                                                         {% if humor.description %}
                                                             <br><small class="text-muted" title="{{ humor.description }}" data-bs-toggle="tooltip">{{ humor.description }}</small>
@@ -97,12 +97,12 @@
                         </div>
                     </div>
 
+
                     <!-- Emotions Evaluation -->
                     <div class="card bg-light mb-4">
                         <div class="card-body">
                             <h5 class="card-title">😊 What emotions does this meme convey?</h5>
                             <p class="card-text small text-muted mb-3">Select all emotions that apply (you can choose multiple):</p>
-                            
                             <div class="row">
                                 {% if config.EMOTIONS_TYPES is defined %}
                                     {% if config.EMOTIONS_TYPES %}
@@ -131,82 +131,6 @@
                             </div>
                         </div>
                     </div>                    
-
-
-                    <!-- Humor Type Evaluation -->
-                    <!-- <div class="card bg-light mb-4">
-                        <div class="card-body">
-                            <h5 class="card-title">😄 What type of humor is this?</h5>
-                            <p class="card-text small text-muted mb-3">Select the humor type that best describes this meme:</p>
-                            
-                            <div class="row">
-                                {% set humor_types = [
-                                    ('Irony/Sarcasm', 'When something means the opposite of what it says'),
-                                    ('Relatability', 'Something most people can relate to or have experienced'),
-                                    ('Absurd/Random', 'Random, nonsensical, or surreal humor'),
-                                    ('Wordplay/Puns', 'Jokes based on word meanings or sounds'),
-                                    ('Visual Humor', 'Funny because of what you see in the image'),
-                                    ('Dark Humor', 'Humor about serious, taboo, or uncomfortable topics'),
-                                    ('Self-deprecating', 'Making fun of oneself or one\'s own group'),
-                                    ('Social Commentary', 'Making a point about society, politics, or culture'),
-                                    ('Pop Culture Reference', 'References to movies, TV, celebrities, etc.'),
-                                    ('Wholesome', 'Feel-good, positive, heartwarming humor'),
-                                    ('Not Humorous', 'This is not meant to be funny')
-                                ] %}
-                                
-                                {% for humor_type, description in humor_types %}
-                                <div class="col-md-6 mb-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="humor_type" 
-                                               value="{{ humor_type }}" id="humor_{{ loop.index }}" required>
-                                        <label class="form-check-label" for="humor_{{ loop.index }}">
-                                            <strong>{{ humor_type }}</strong>
-                                            <br><small class="text-muted">{{ description }}</small>
-                                        </label>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div> -->
-                    
-                    <!-- Emotions Evaluation -->
-                    <!-- <div class="card bg-light mb-4">
-                        <div class="card-body">
-                            <h5 class="card-title">😊 What emotions does this meme convey?</h5>
-                            <p class="card-text small text-muted mb-3">Select all emotions that apply (you can choose multiple):</p>
-                            
-                            <div class="row">
-                                {% set emotions = [
-                                    ('Joy', '😄', 'Happiness, laughter, amusement'),
-                                    ('Frustration', '😤', 'Annoyance, irritation, anger'),
-                                    ('Confusion', '😕', 'Bewilderment, uncertainty, "what?"'),
-                                    ('Pride', '😎', 'Confidence, superiority, accomplishment'),
-                                    ('Nostalgia', '🥺', 'Longing for the past, bittersweet memories'),
-                                    ('Anxiety', '😰', 'Stress, worry, nervousness'),
-                                    ('Relief', '😌', 'Comfort, release from tension'),
-                                    ('Surprise', '😲', 'Shock, amazement, unexpectedness'),
-                                    ('Embarrassment', '😳', 'Shame, awkwardness, cringe'),
-                                    ('Satisfaction', '😌', 'Contentment, fulfillment'),
-                                    ('Curiosity', '🤔', 'Interest, wonder, questioning'),
-                                    ('Empathy', '🤝', 'Understanding, shared feeling')
-                                ] %}
-                                
-                                {% for emotion, emoji, description in emotions %}
-                                <div class="col-md-6 mb-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="emotions" 
-                                               value="{{ emotion }}" id="emotion_{{ loop.index }}">
-                                        <label class="form-check-label" for="emotion_{{ loop.index }}">
-                                            <span class="me-1">{{ emoji }}</span><strong>{{ emotion }}</strong>
-                                            <br><small class="text-muted">{{ description }}</small>
-                                        </label>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div> -->
                     
                     <!-- Cultural Context (Optional) -->
                     <div class="card bg-light mb-4">
@@ -238,26 +162,6 @@
                                     <strong>Specialized</strong><br>
                                     <small>Need specific knowledge</small>
                                 </label>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Confidence Level -->
-                    <div class="card bg-light mb-4">
-                        <div class="card-body">
-                            <h6 class="card-title">How confident are you in your evaluation?</h6>
-                            <div class="btn-group w-100" role="group">
-                                <input type="radio" class="btn-check" name="confidence_level" id="conf1" value="1">
-                                <label class="btn btn-outline-danger" for="conf1">😰 Not Sure</label>
-                                
-                                <input type="radio" class="btn-check" name="confidence_level" id="conf2" value="2">
-                                <label class="btn btn-outline-warning" for="conf2">🤔 Somewhat</label>
-                                
-                                <input type="radio" class="btn-check" name="confidence_level" id="conf3" value="3" checked>
-                                <label class="btn btn-outline-info" for="conf3">😊 Confident</label>
-                                
-                                <input type="radio" class="btn-check" name="confidence_level" id="conf4" value="4">
-                                <label class="btn btn-outline-success" for="conf4">💪 Very Sure</label>
                             </div>
                         </div>
                     </div>
