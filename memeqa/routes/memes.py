@@ -1,5 +1,5 @@
 # memeqa/routes/memes.py
-from flask import Blueprint, render_template, request, abort, send_from_directory, current_app, flash, redirect, url_for, session
+from flask import Blueprint, render_template, request, abort, send_from_directory, current_app, flash, redirect, url_for, session,jsonify
 from memeqa.database import get_db
 from memeqa.utils import Pagination, allowed_file, get_upload_folder, get_current_user, AppSession, save_uploaded_file, list_to_string
 import json
@@ -12,6 +12,7 @@ def gallery():
     """Display uploaded memes with enhanced pagination"""
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 4, type=int)
+    filter_type = request.args.get('filter', 'all')
     
     # Limit per_page options for security
     if per_page not in [4, 8, 16]:
@@ -25,20 +26,134 @@ def gallery():
     
     # Get database connection
     db = get_db()
+
+    current_user = get_current_user(db)
+
+    # Restrict gallery to registered users only
+    if not current_user:
+        flash('Please register or log in to access the gallery.', 'error')
+        return redirect(url_for('auth.register'))
+    user_id = current_user['id'] if current_user else None
     
-    # Get total count for pagination
-    total_count = db.execute('SELECT COUNT(*) as count FROM memes').fetchone()['count']
-    
+    # Build base queries depending on filter
+    if filter_type == 'all':
+        id_query = '''
+            SELECT m.id
+            FROM memes AS m
+            LEFT JOIN evaluations AS e
+                ON m.id = e.meme_id
+                AND e.user_id = ?
+            WHERE m.user_id = ? OR e.user_id = ?
+            ORDER BY m.upload_date DESC
+            LIMIT ? OFFSET ?
+        '''
+        count_query = '''
+            SELECT COUNT(*) AS count
+            FROM (
+                SELECT m.id
+                FROM memes AS m
+                LEFT JOIN evaluations AS e
+                    ON m.id = e.meme_id
+                    AND e.user_id = ?
+                WHERE m.user_id = ? OR e.user_id = ?
+            )
+        '''
+        id_params = [user_id, user_id, user_id, per_page, offset]
+        count_params = [user_id, user_id, user_id]
+
+    elif filter_type == 'evaluated':
+        id_query = '''
+            SELECT m.id
+            FROM memes AS m
+            LEFT JOIN evaluations AS e
+                ON m.id = e.meme_id
+                AND e.user_id = ?
+            WHERE e.user_id = ?
+            ORDER BY m.upload_date DESC
+            LIMIT ? OFFSET ?
+        '''
+        count_query = '''
+            SELECT COUNT(*) AS count
+            FROM (
+                SELECT m.id
+                FROM memes AS m
+                LEFT JOIN evaluations AS e
+                    ON m.id = e.meme_id
+                    AND e.user_id = ?
+                WHERE e.user_id = ?
+            )
+        '''
+        id_params = [user_id, user_id, per_page, offset]
+        count_params = [user_id, user_id]
+    elif filter_type == 'own':
+        id_query = '''
+            SELECT m.id
+            FROM memes AS m
+            WHERE m.user_id = ?
+            ORDER BY m.upload_date DESC
+            LIMIT ? OFFSET ?
+        '''
+        count_query = '''
+            SELECT COUNT(*) AS count
+            FROM memes AS m
+            WHERE m.user_id = ?
+        '''
+        id_params = [user_id, per_page, offset]
+        count_params = [user_id]
+
+    elif filter_type == 'liked':
+        id_query = '''
+            SELECT m.id
+            FROM memes AS m
+            LEFT JOIN meme_likes AS ml
+                ON m.id = ml.meme_id
+                AND ml.user_id = ?
+            WHERE ml.user_id = ?
+            ORDER BY m.upload_date DESC
+            LIMIT ? OFFSET ?
+        '''
+        count_query = '''
+            SELECT COUNT(*) AS count
+            FROM (
+                SELECT m.id
+                FROM memes AS m
+                LEFT JOIN meme_likes AS ml
+                    ON m.id = ml.meme_id
+                    AND ml.user_id = ?
+                WHERE ml.user_id = ?
+            )
+        '''
+        id_params = [user_id, user_id, per_page, offset]
+        count_params = [user_id, user_id]
+    else:
+        abort(400)
+
+    # Execute count
+    total_count = db.execute(count_query, count_params).fetchone()['count']
+   
     # Check if page is out of range
     max_page = (total_count + per_page - 1) // per_page if total_count > 0 else 1
     if page > max_page and total_count > 0:
         abort(404)
-    
-    # Get memes for current page
-    memes = db.execute(
-        'SELECT * FROM memes ORDER BY upload_date DESC LIMIT ? OFFSET ?',
-        (per_page, offset)
-    ).fetchall()
+
+    # Fetch meme IDs
+    rows = db.execute(id_query, id_params).fetchall()
+    meme_ids = [row['id'] for row in rows]
+
+    # Fetch meme details
+    if meme_ids:
+        placeholders = ','.join('?' for _ in meme_ids)
+        memes = db.execute(f'''
+            SELECT m.*,
+                CASE WHEN ml.user_id IS NOT NULL THEN 1 ELSE 0 END AS liked_by_user
+            FROM memes m
+            LEFT JOIN meme_likes AS ml
+                ON m.id = ml.meme_id AND ml.user_id = ?
+            WHERE m.id IN ({placeholders})
+            ORDER BY m.upload_date DESC
+            ''', [user_id] + meme_ids).fetchall()
+    else:
+        memes = []
     
     # Create pagination object
     pagination = Pagination(page, per_page, total_count)
@@ -46,7 +161,48 @@ def gallery():
     
     return render_template('memes/gallery.html', 
                          memes=pagination,
-                         per_page=per_page)
+                         per_page=per_page,
+                         filter_type=filter_type)
+
+# Like/unlike meme route
+@bp.route('/like/<int:meme_id>', methods=['POST'])
+def like_meme(meme_id):
+    db = get_db()
+    current_user = get_current_user(db)
+    if not current_user:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    user_id = current_user['id']
+    existing = db.execute(
+        'SELECT 1 FROM meme_likes WHERE meme_id = ? AND user_id = ?',
+        (meme_id, user_id)
+    ).fetchone()
+
+    if existing:
+        db.execute(
+            'DELETE FROM meme_likes WHERE meme_id = ? AND user_id = ?',
+            (meme_id, user_id)
+        )
+        liked = False
+    else:
+        db.execute(
+            'INSERT INTO meme_likes (meme_id, user_id) VALUES (?, ?)',
+            (meme_id, user_id)
+        )
+        liked = True
+
+    db.commit()
+
+    # Get updated like count
+    likes_count = db.execute(
+        'SELECT COUNT(*) AS c FROM meme_likes WHERE meme_id = ?',
+        (meme_id,)
+    ).fetchone()['c']
+
+    return jsonify({
+        'liked': liked,
+        'likes': likes_count
+    })
 
 @bp.route('/upload', methods=['GET', 'POST'])
 def upload_file():
@@ -160,8 +316,8 @@ def upload_file():
                 cursor.execute('''
                     INSERT INTO memes (
                         filename, original_filename, contributor_name, contributor_email,
-                        contributor_country, platform_found, uploader_session, uploader_user_id,
-                        meme_content, humor_type, emotions_conveyed, context_required,
+                        contributor_country, platform_found, session_id, user_id,
+                        languages, humor_type, emotions_conveyed, context_level,
                         terms_agreement
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
@@ -183,7 +339,7 @@ def upload_file():
                 try:
                     cursor.execute('''
                         INSERT INTO meme_descriptions (
-                            meme_id, description, is_original, uploader_user_id, uploader_session, created_at
+                            meme_id, description, is_original, user_id, session_id, created_at
                         ) VALUES (?, ?, ?, ?, ?, ?)
                     ''', (
                         meme_id,
@@ -307,3 +463,195 @@ def uploaded_file(filename):
     """Serve uploaded files"""
     upload_folder = get_upload_folder(current_app)
     return send_from_directory(upload_folder, filename)
+
+@bp.route('/meme/<int:meme_id>')
+def meme_detail(meme_id):
+    db = get_db()
+
+    current_user = get_current_user(db)
+
+    # Retrieve navigation state
+    gallery_page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 4, type=int)
+    filter_type = request.args.get('filter', 'all')
+
+    user_id = current_user['id'] if current_user else None
+
+    # # Restrict gallery to registered users only
+    # if not current_user:
+    #     flash('Please register or log in to view individual memes.', 'error')
+    #     return redirect(url_for('auth.register'))
+
+    # User’s own evaluation (if exists)
+    user_eval = None
+    if user_id:
+        user_eval = db.execute(
+            "SELECT * FROM evaluations WHERE meme_id = ? AND user_id = ?",
+            (meme_id, user_id)
+        ).fetchone()
+
+    # Meme details
+    meme = db.execute('SELECT * FROM memes WHERE id = ?', (meme_id,)).fetchone()
+
+    is_user_owner = False
+    if current_user and meme['user_id'] == current_user['id']:
+        is_user_owner = True
+        print(f'User {current_user["id"]} is owner of meme {meme_id}')
+
+    # User has to have evaluated meme to view it or Own meme
+    if not user_eval and not is_user_owner:
+        flash('You need to evaluate this meme before viewing its details.', 'error')
+        return redirect(url_for('memes.gallery'))
+    
+
+    # Build filtered meme id list for navigation consistency
+    base_query = None
+    params = None
+
+    if filter_type == 'all':
+        base_query = '''
+            SELECT m.id
+            FROM memes AS m
+            LEFT JOIN evaluations AS e
+                ON m.id = e.meme_id AND e.user_id = ?
+            WHERE m.user_id = ? OR e.user_id = ?
+            ORDER BY m.upload_date DESC
+        '''
+        params = [user_id, user_id, user_id]
+
+    elif filter_type == 'evaluated':
+        base_query = '''
+            SELECT m.id
+            FROM memes AS m
+            JOIN evaluations AS e
+                ON m.id = e.meme_id
+            WHERE e.user_id = ?
+            ORDER BY m.upload_date DESC
+        '''
+        params = [user_id]
+
+    elif filter_type == 'own':
+        base_query = '''
+            SELECT id
+            FROM memes
+            WHERE user_id = ?
+            ORDER BY upload_date DESC
+        '''
+        params = [user_id]
+
+    elif filter_type == 'liked':
+        base_query = '''
+            SELECT m.id
+            FROM memes AS m
+            JOIN meme_likes AS ml
+                ON m.id = ml.meme_id
+            WHERE ml.user_id = ?
+            ORDER BY m.upload_date DESC
+        '''
+        params = [user_id]
+
+    # Fetch list of meme IDs in correct order
+    meme_list = [row["id"] for row in db.execute(base_query, params).fetchall()]
+
+    prev_id = None
+    prev_page = gallery_page
+    next_id = None
+    next_page = gallery_page
+
+    if meme_id in meme_list:
+        idx = meme_list.index(meme_id)
+        
+        # Next meme
+        if idx > 0:
+            next_id = meme_list[idx - 1]
+            next_page = get_meme_page(meme_list, next_id, per_page)
+            
+        # Previous meme
+        if idx < len(meme_list) - 1:
+            prev_id = meme_list[idx + 1]
+            prev_page = get_meme_page(meme_list, prev_id, per_page)
+
+    # Page for back-to-gallery
+    gallery_page_for_current_meme = get_meme_page(meme_list, meme_id, per_page)
+
+
+
+    # Likes count
+    likes_count = db.execute(
+        "SELECT COUNT(*) AS c FROM meme_likes WHERE meme_id = ?", 
+        (meme_id,)
+    ).fetchone()["c"]
+
+    # Evaluations count
+    eval_count = db.execute(
+        "SELECT COUNT(*) AS c FROM evaluations WHERE meme_id = ?", 
+        (meme_id,)
+    ).fetchone()["c"]
+
+    descriptions = db.execute(
+        """
+        SELECT
+            md.*,
+            CASE
+                WHEN md.user_id = ?2 THEN 'You'
+                ELSE u.name
+            END AS uploader_name,
+            de.vote,
+            m.id AS meme_own
+        FROM meme_descriptions md
+        LEFT JOIN users u
+            ON md.user_id = u.id
+        LEFT JOIN description_evaluations de
+            ON md.id = de.description_id
+            AND de.user_id = ?2
+        LEFT JOIN memes m
+            ON md.meme_id = m.id
+        WHERE md.meme_id = ?1
+        AND (
+                m.user_id = ?2              -- user owns the meme
+                OR de.vote IS NOT NULL      -- user evaluated description
+                OR md.user_id = ?2 -- user wrote the description
+            )
+        ORDER BY md.created_at DESC
+        """,
+        (meme_id, user_id)
+    ).fetchall()
+
+    # Did current user like this meme?
+    liked_by_user = False
+    if user_id:
+        liked_by_user = db.execute(
+            "SELECT 1 FROM meme_likes WHERE meme_id = ? AND user_id = ?",
+            (meme_id, user_id)
+        ).fetchone() is not None
+
+    if not meme:
+        abort(404)
+
+    # If you later add descriptions, evaluations, etc., fetch them here
+    # descriptions = ...
+
+    return render_template(
+        "memes/meme_detail.html",
+        meme=meme,
+        likes_count=likes_count,
+        eval_count=eval_count,
+        descriptions=descriptions,
+        user_eval=user_eval,
+        liked_by_user=liked_by_user,
+        is_user_owner=is_user_owner,
+        gallery_page=gallery_page_for_current_meme,  # correct page for back button
+        per_page=per_page,
+        filter_type=filter_type,
+        prev_id=prev_id,
+        prev_page=prev_page,
+        next_id=next_id,
+        next_page=next_page
+    )
+
+def get_meme_page(meme_list, target_id, per_page):
+    """Return the page number where the target meme appears in meme_list"""
+    if target_id not in meme_list:
+        return 1
+    idx = meme_list.index(target_id)  # 0-based index
+    return (idx // per_page) + 1      # 1-based page number

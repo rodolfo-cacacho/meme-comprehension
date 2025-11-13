@@ -97,7 +97,7 @@ def create_app():
             
             # Get upload count for anonymous users
             upload_count_result = db.execute(
-                'SELECT COUNT(*) as count FROM memes WHERE uploader_session = ? AND uploader_user_id IS NULL',
+                'SELECT COUNT(*) as count FROM memes WHERE session_id = ? AND user_id IS NULL',
                 (session_id,)
             ).fetchone()
             upload_count = upload_count_result['count'] if upload_count_result else 0
@@ -110,11 +110,11 @@ def create_app():
             'get_total_memes': lambda: db.execute('SELECT COUNT(*) as count FROM memes').fetchone()['count'],
             'get_available_memes_for_user': lambda: db.execute('''
                 SELECT COUNT(*) as count FROM memes 
-                WHERE uploader_user_id != ? 
+                WHERE user_id != ? 
                 AND id NOT IN (SELECT meme_id FROM evaluations WHERE user_id = ?)
             ''', (current_user['id'], current_user['id'])).fetchone()['count'] if current_user else db.execute('''
                 SELECT COUNT(*) as count FROM memes 
-                WHERE uploader_session != ? 
+                WHERE session_id != ? 
                 AND id NOT IN (
                     SELECT meme_id FROM evaluations 
                     WHERE session_id = ? AND user_id IS NULL

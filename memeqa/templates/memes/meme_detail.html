@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Meme {{ meme.id }} - MemeQA{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <!-- <a href="{{ url_for('memes.gallery', page=gallery_page, per_page=per_page, filter=filter_type) }}"
+           class="btn btn-outline-primary">
+            ← Back to Gallery
+        </a> -->
+        <a href="{{ url_for('memes.gallery', page=gallery_page, per_page=per_page, filter=filter_type) }}"
+        class="btn btn-outline-primary">
+            ← Back to Gallery
+        </a>
+
+        <div class="btn-group">
+            {% if prev_id %}
+            <a class="btn btn-outline-secondary"
+            href="{{ url_for('memes.meme_detail', meme_id=prev_id, page=prev_page, per_page=per_page, filter=filter_type) }}">
+                ← Previous
+            </a>
+            {% endif %}
+            {% if next_id %}
+            <a class="btn btn-outline-secondary"
+            href="{{ url_for('memes.meme_detail', meme_id=next_id, page=next_page, per_page=per_page, filter=filter_type) }}">
+                Next →
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card shadow-sm p-3">
+
+        <!-- MEME IMAGE + LIKE BUTTON -->
+        <div class="d-flex justify-content-center position-relative">
+            <img src="{{ url_for('memes.uploaded_file', filename=meme.filename) }}"
+                 alt="{{ meme.original_filename }}"
+                 class="img-fluid rounded"
+                 style="max-height:600px; object-fit:contain; background:#f8f9fa;">
+
+            <!-- Like button -->
+            <button class="btn btn-link position-absolute top-0 end-0 m-3 like-btn"
+                    data-meme-id="{{ meme.id }}">
+                {% if liked_by_user %}
+                    <i class="bi bi-heart-fill text-danger fs-3"></i>
+                {% else %}
+                    <i class="bi bi-heart text-danger fs-3"></i>
+                {% endif %}
+            </button>
+        </div>
+
+        <hr>
+
+        <!-- BASIC INFO -->
+        <h4>Meme #{{ meme.id }}</h4>
+        <p class="text-muted">
+            Uploaded {{ meme.upload_date.date() }}
+            {% if meme.platform_found %} • Platform: {{ meme.platform_found }}{% endif %}
+            {% if meme.meme_content %} • Languages: {{ meme.meme_content }}{% endif %}
+            {% if meme.context_level %} • Context Level: {{ meme.context_level }}{% endif %}
+        </p>
+
+        <!-- STATS -->
+        <div class="mt-3">
+            <span class="badge bg-primary">❤️ {{ likes_count }} Likes</span>
+            <span class="badge bg-secondary">📝 {{ eval_count }} Evaluations</span>
+        </div>
+
+        <hr>
+
+        <!-- USER'S OWN EVALUATION (if exists) -->
+        {% if user_eval %}
+            <h5>Your Evaluation</h5>
+            <div class="p-2 border rounded bg-light">
+                <p><strong>Humor Types:</strong> {{ user_eval.evaluated_humor_type or "—" }}</p>
+                <p><strong>Emotions:</strong> {{ user_eval.evaluated_emotions or "—" }}</p>
+                <p><strong>Context Level:</strong> {{ user_eval.evaluated_context_level or "—" }}</p>
+            </div>
+            <hr>
+        {% endif %}
+
+        <!-- DESCRIPTIONS -->
+        <h5>Descriptions</h5>
+
+        {% if descriptions %}
+            <ul class="list-group">
+                {% for d in descriptions %}
+                    <li class="list-group-item position-relative">
+                        <strong>{{ d.uploader_name or "Anonymous" }}:</strong>
+                        <p>{{ d.description }}</p>
+                        <small class="text-muted">{{ d.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+
+                        <div class="position-absolute bottom-0 end-0 mb-1 me-2 text-muted" style="font-size: 0.9rem;">
+                            <span class="me-2">
+                                <i class="bi bi-hand-thumbs-up"></i> {{ d.likes }}
+                            </span>
+                            <span>
+                                <i class="bi bi-hand-thumbs-down"></i> {{ d.dislikes }}
+                            </span>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted">No descriptions yet.</p>
+        {% endif %}
+
+    </div>
+
+</div>
+
+<!-- LIKE BUTTON JS -->
+<script>
+document.addEventListener('click', async function(e) {
+    const btn = e.target.closest('.like-btn');
+    if (!btn) return;
+
+    const memeId = btn.dataset.memeId;
+    const res = await fetch(`{{ url_for('memes.like_meme', meme_id=0) }}`.replace("0", memeId), {
+        method: 'POST'
+    });
+
+    if (!res.ok) return;
+    const data = await res.json();
+
+    if (data.liked) {
+        btn.innerHTML = '<i class="bi bi-heart-fill text-danger fs-3"></i>';
+    } else {
+        btn.innerHTML = '<i class="bi bi-heart text-danger fs-3"></i>';
+    }
+});
+</script>
+
+{% endblock %}

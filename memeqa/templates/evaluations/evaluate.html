@@ -1,7 +1,5 @@
-<!-- templates/evaluate_humor_emotion.html -->
 {% extends "base.html" %}
-
-{% block title %}Evaluate Meme - MemeQA{% endblock %}
+{% block title %}Evaluate Meme{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -53,144 +51,184 @@
             </div>
         </div>
 
-        <!-- Evaluation Form -->
-        <div class="card shadow-sm">
-            <div class="card-header bg-warning text-dark">
-                <h4 class="mb-0">🤔 What do you think about this meme?</h4>
-            </div>
-            <div class="card-body">
-                <form method="post" action="{{ url_for('evaluations.process_evaluation') }}" id="evaluationForm">
-                    <input type="hidden" name="meme_id" value="{{ meme.id }}">
-                    <input type="hidden" name="evaluation_time" id="evaluation_time" value="0">
+        {% if meme %}
+        <form method="post" action="{{ url_for('evaluations.evaluate_meme') }}" id="evaluationForm">
+            <input type="hidden" name="meme_id" value="{{ meme.id }}">
+            <input type="hidden" name="description_id" value="{{ description_id }}">
+            <input type="hidden" name="evaluation_time" id="evaluation_time" value="0">
 
-                    <!-- Humor Evaluation -->
-                    <div class="card bg-light mb-4">
-                        <div class="card-body">
-                            <h5 class="card-title">😄 What type of humor is this?</h5>
-                            <p class="card-text small text-muted mb-3">Select all the humor types that apply (you can choose multiple):</p>
-                            <div class="row">
-                                {% if config.HUMOR_TYPES is defined %}
-                                    {% if config.HUMOR_TYPES %}
-                                        {% for humor in config.HUMOR_TYPES %}
-                                            <div class="col-md-6 mb-2">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="humors[]" 
-                                                        value="{{ humor.type }}" id="humor_{{ loop.index }}"
-                                                        {{ 'checked' if form_data and form_data.humors and humor.type in form_data.humors else '' }}>
-                                                    <label class="form-check-label" for="humor_{{ loop.index }}">
-                                                        {% if humor.emoji %}<span class="me-1">{{ humor.emoji }}</span>{% endif %}
-                                                        <strong>{{ humor.type }}</strong>
-                                                        {% if humor.description %}
-                                                            <br><small class="text-muted" title="{{ humor.description }}" data-bs-toggle="tooltip">{{ humor.description }}</small>
-                                                        {% endif %}
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        {% endfor %}
-                                    {% else %}
-                                        <p class="text-warning">config.HUMOR_TYPES is empty. Please check configuration.</p>
-                                    {% endif %}
-                                {% else %}
-                                    <p class="text-danger">Error: config.HUMOR_TYPES is not defined in the template context.</p>
-                                {% endif %}
-                            </div>
-                        </div>
+            {% if not eval_status.humor_done | default(false) %}
+            <!-- Humor Evaluation -->
+            <div class="card bg-light mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">😄 What type of humor is this?</h5>
+                    <p class="card-text small text-muted mb-3">Select all the humor types that apply (you can choose multiple):</p>
+                    <div class="row">
+                        {% if config.HUMOR_TYPES is defined %}
+                            {% if config.HUMOR_TYPES %}
+                                {% for humor in config.HUMOR_TYPES %}
+                                    <div class="col-md-6 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="humors[]" 
+                                                value="{{ humor.type }}" id="humor_{{ loop.index }}"
+                                                {{ 'checked' if form_data and form_data.humors and humor.type in form_data.humors else '' }}>
+                                            <label class="form-check-label" for="humor_{{ loop.index }}">
+                                                {% if humor.emoji %}<span class="me-1">{{ humor.emoji }}</span>{% endif %}
+                                                <strong>{{ humor.type }}</strong>
+                                                {% if humor.description %}
+                                                    <br><small class="text-muted" title="{{ humor.description }}" data-bs-toggle="tooltip">{{ humor.description }}</small>
+                                                {% endif %}
+                                            </label>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-warning">config.HUMOR_TYPES is empty. Please check configuration.</p>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-danger">Error: config.HUMOR_TYPES is not defined in the template context.</p>
+                        {% endif %}
                     </div>
-
-
-                    <!-- Emotions Evaluation -->
-                    <div class="card bg-light mb-4">
-                        <div class="card-body">
-                            <h5 class="card-title">😊 What emotions does this meme convey?</h5>
-                            <p class="card-text small text-muted mb-3">Select all emotions that apply (you can choose multiple):</p>
-                            <div class="row">
-                                {% if config.EMOTIONS_TYPES is defined %}
-                                    {% if config.EMOTIONS_TYPES %}
-                                        {% for emotion in config.EMOTIONS_TYPES %}
-                                            <div class="col-md-6 mb-2">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="emotions[]" 
-                                                        value="{{ emotion.emotion }}" id="emotion_{{ loop.index }}"
-                                                        {{ 'checked' if form_data and form_data.emotions and emotion.emotion in form_data.emotions else '' }}>
-                                                    <label class="form-check-label" for="emotion_{{ loop.index }}">
-                                                        {% if emotion.emoji %}<span class="me-1">{{ emotion.emoji }}</span>{% endif %}
-                                                        <strong>{{ emotion.emotion }}</strong>
-                                                        {% if emotion.description %}
-                                                            <br><small class="text-muted" title="{{ emotion.description }}" data-bs-toggle="tooltip">{{ emotion.description }}</small>
-                                                        {% endif %}
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        {% endfor %}
-                                    {% else %}
-                                        <p class="text-warning">config.EMOTIONS_TYPES is empty. Please check configuration.</p>
-                                    {% endif %}
-                                {% else %}
-                                    <p class="text-danger">Error: config.EMOTIONS_TYPES is not defined in the template context.</p>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>                    
-                    
-                    <!-- Cultural Context (Optional) -->
-                    <div class="card bg-light mb-4">
-                        <div class="card-body">
-                            <h5 class="card-title">🌍 Cultural Context <span class="text-muted">(Optional)</span></h5>
-                            <p class="card-text small text-muted mb-3">How much cultural knowledge is needed to understand this meme?</p>
-                            
-                            <div class="btn-group w-100" role="group">
-                                <input type="radio" class="btn-check" name="context_level" id="context1" value="Universal">
-                                <label class="btn btn-outline-success" for="context1">
-                                    <strong>Universal</strong><br>
-                                    <small>Anyone can understand</small>
-                                </label>
-                                
-                                <input type="radio" class="btn-check" name="context_level" id="context2" value="Basic Internet">
-                                <label class="btn btn-outline-info" for="context2">
-                                    <strong>Basic Internet</strong><br>
-                                    <small>Need basic web culture</small>
-                                </label>
-                                
-                                <input type="radio" class="btn-check" name="context_level" id="context3" value="Pop Culture">
-                                <label class="btn btn-outline-warning" for="context3">
-                                    <strong>Pop Culture</strong><br>
-                                    <small>Need cultural references</small>
-                                </label>
-                                
-                                <input type="radio" class="btn-check" name="context_level" id="context4" value="Specialized">
-                                <label class="btn btn-outline-danger" for="context4">
-                                    <strong>Specialized</strong><br>
-                                    <small>Need specific knowledge</small>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="text-center">
-                        <button type="submit" class="btn btn-primary btn-lg px-5" id="submitBtn" disabled>
-                            ✅ Submit Evaluation
-                        </button>
-                        <div class="mt-2">
-                            <small class="text-muted" id="submitHint">Select humor type and at least one emotion to continue</small>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Skip Option -->
-        <div class="text-center mt-3">
-            <details class="text-muted">
-                <summary style="cursor: pointer;">Having trouble with this meme?</summary>
-                <div class="mt-2">
-                    <p class="small">If this meme is unclear, inappropriate, or you can't determine the humor/emotions:</p>
-                    <a href="{{ url_for('evaluations.evaluate') }}" class="btn btn-outline-secondary btn-sm">
-                        ⏭️ Skip This Meme
-                    </a>
                 </div>
-            </details>
+            </div>
+            {% endif %}
+
+            {% if not eval_status.emotion_done | default(false) %}
+            <!-- Emotions Evaluation -->
+            <div class="card bg-light mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">😊 What emotions does this meme convey?</h5>
+                    <p class="card-text small text-muted mb-3">Select all emotions that apply (you can choose multiple):</p>
+                    <div class="row">
+                        {% if config.EMOTIONS_TYPES is defined %}
+                            {% if config.EMOTIONS_TYPES %}
+                                {% for emotion in config.EMOTIONS_TYPES %}
+                                    <div class="col-md-6 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="emotions[]" 
+                                                value="{{ emotion.emotion }}" id="emotion_{{ loop.index }}"
+                                                {{ 'checked' if form_data and form_data.emotions and emotion.emotion in form_data.emotions else '' }}>
+                                            <label class="form-check-label" for="emotion_{{ loop.index }}">
+                                                {% if emotion.emoji %}<span class="me-1">{{ emotion.emoji }}</span>{% endif %}
+                                                <strong>{{ emotion.emotion }}</strong>
+                                                {% if emotion.description %}
+                                                    <br><small class="text-muted" title="{{ emotion.description }}" data-bs-toggle="tooltip">{{ emotion.description }}</small>
+                                                {% endif %}
+                                            </label>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-warning">config.EMOTIONS_TYPES is empty. Please check configuration.</p>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-danger">Error: config.EMOTIONS_TYPES is not defined in the template context.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if not eval_status.context_done | default(false) %}
+            <!-- Cultural Context (Optional) -->
+            <div class="card bg-light mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">🌍 Cultural Context </span></h5>
+                    <p class="card-text small text-muted mb-3">How much cultural knowledge is needed to understand this meme?</p>
+                    
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="context_level" id="context1" value="Universal">
+                        <label class="btn btn-outline-success" for="context1">
+                            <strong>Universal</strong><br>
+                            <small>Anyone can understand</small>
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="context_level" id="context2" value="Basic Internet">
+                        <label class="btn btn-outline-info" for="context2">
+                            <strong>Basic Internet</strong><br>
+                            <small>Need basic web culture</small>
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="context_level" id="context3" value="Pop Culture">
+                        <label class="btn btn-outline-warning" for="context3">
+                            <strong>Pop Culture</strong><br>
+                            <small>Need cultural references</small>
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="context_level" id="context4" value="Specialized">
+                        <label class="btn btn-outline-danger" for="context4">
+                            <strong>Specialized</strong><br>
+                            <small>Need specific knowledge</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            {% endif %}
+
+            <!-- Description Evaluation -->
+            <div class="card bg-light mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">📝 Meme Description</h5>
+
+                    {% if description %}
+                        <p class="card-text mb-2"><strong>Current description:</strong></p>
+                        <div class="p-3 border rounded bg-white mb-3">{{ description }}</div>
+
+                        <div class="text-center mb-3">
+                            <label class="form-label d-block mb-2">Do you agree with this description?</label>
+                            <div class="btn-group" role="group">
+                                <input type="radio" class="btn-check" name="description_feedback" id="desc_like" value="like">
+                                <label class="btn btn-outline-success" for="desc_like">👍 Like</label>
+
+                                <input type="radio" class="btn-check" name="description_feedback" id="desc_dislike" value="dislike">
+                                <label class="btn btn-outline-danger" for="desc_dislike">👎 Dislike</label>
+                            </div>
+                        </div>
+
+                        <div id="description_edit_section" class="mt-3" style="display: none;">
+                            <label for="new_description" class="form-label">💡 Suggest a better description:</label>
+                            <textarea class="form-control" name="new_description" id="new_description" rows="3"
+                                    placeholder="Write an improved description..."></textarea>
+                        </div>
+                    {% else %}
+                        <p class="card-text small text-muted mb-2">This meme doesn’t have a description yet. You can write one below 👇</p>
+                        <textarea class="form-control" name="new_description" id="new_description" rows="3"
+                                placeholder="Write a short description for this meme..."></textarea>
+                    {% endif %}
+                </div>
+            </div>
+            {% if current_user %}
+
+            <!-- Like Meme -->
+            <div class="card bg-light mb-4">
+                <div class="card-body text-center">
+                    <label class="form-label d-block mb-2">❤️ Do you like this meme?</label>
+                    <input type="checkbox" class="btn-check" name="like_meme" id="like_meme" value="1">
+                    <label class="btn btn-outline-danger btn-lg" for="like_meme">
+                        ❤️ Like
+                    </label>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary btn-lg px-5" id="submitBtn">
+                    ✅ Submit Evaluation
+                </button>
+            </div>
+        </form>
+
+
+
+      {% else %}
+        <div class="alert alert-secondary text-center">
+          🎉 You’ve evaluated all available memes for now!  
+          Check back later for more.
         </div>
+      {% endif %}
     </div>
+  </div>
 </div>
 
 <style>
@@ -258,73 +296,20 @@ function updateTimer() {
 // Start timer
 timerInterval = setInterval(updateTimer, 1000);
 
-// Check form validity
-function checkFormValidity() {
-    const humorSelected = document.querySelector('input[name="humor_type"]:checked');
-    const emotionsSelected = document.querySelectorAll('input[name="emotions"]:checked');
-    const submitBtn = document.getElementById('submitBtn');
-    const hint = document.getElementById('submitHint');
-    
-    if (humorSelected && emotionsSelected.length > 0) {
-        submitBtn.disabled = false;
-        hint.textContent = 'Ready to submit!';
-        hint.className = 'text-success';
-    } else {
-        submitBtn.disabled = true;
-        if (!humorSelected && emotionsSelected.length === 0) {
-            hint.textContent = 'Select humor type and at least one emotion to continue';
-        } else if (!humorSelected) {
-            hint.textContent = 'Please select a humor type';
-        } else {
-            hint.textContent = 'Please select at least one emotion';
-        }
-        hint.className = 'text-muted';
+document.addEventListener('DOMContentLoaded', function() {
+  const descEdit = document.getElementById('description_edit_section');
+  if (descEdit) {
+    const descLike = document.getElementById('desc_like');
+    const descDislike = document.getElementById('desc_dislike');
+    const maxReached = {{ 'true' if description_count >= 4 else 'false' }};
+
+    if (!maxReached && descLike && descDislike) {
+      descLike.addEventListener('change', () => descEdit.style.display = 'none');
+      descDislike.addEventListener('change', () => descEdit.style.display = 'block');
+    } else if (maxReached) {
+      descEdit?.remove();
     }
-}
-
-// Add event listeners
-document.querySelectorAll('input[name="humor_type"]').forEach(radio => {
-    radio.addEventListener('change', checkFormValidity);
+  }
 });
-
-document.querySelectorAll('input[name="emotions"]').forEach(checkbox => {
-    checkbox.addEventListener('change', checkFormValidity);
-});
-
-// Handle form submission
-document.getElementById('evaluationForm').addEventListener('submit', function(e) {
-    const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-    document.getElementById('evaluation_time').value = elapsedSeconds;
-    
-    // Stop timer
-    clearInterval(timerInterval);
-    
-    // Disable submit button
-    const submitBtn = document.getElementById('submitBtn');
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '⏳ Submitting...';
-});
-
-// Keyboard shortcuts for humor types (1-9, 0, -, =)
-document.addEventListener('keydown', function(e) {
-    const humorInputs = document.querySelectorAll('input[name="humor_type"]');
-    let index = -1;
-    
-    if (e.key >= '1' && e.key <= '9') {
-        index = parseInt(e.key) - 1;
-    } else if (e.key === '0') {
-        index = 9;
-    } else if (e.key === '-') {
-        index = 10;
-    }
-    
-    if (index >= 0 && index < humorInputs.length) {
-        humorInputs[index].checked = true;
-        checkFormValidity();
-    }
-});
-
-// Initial check
-checkFormValidity();
 </script>
 {% endblock %}

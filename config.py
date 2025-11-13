@@ -24,6 +24,7 @@ class Config:
     REG_MAX_UPLOAD = 10000
     PROMPT_EVAL_EVERY = 10  # should_prompt_upload
     PROMPT_UPLOAD_EVERY = 5  # should_prompt_evaluate
+    MAX_DESCRIPTIONS_PER_MEME = 4
     
     # Environment detection - make sure these are uppercase
     ENV = os.environ.get('ENV', 'production')

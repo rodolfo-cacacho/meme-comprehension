@@ -130,7 +130,7 @@ def get_session_stats(db, session_id, user_id=None):
     else:
         # For anonymous users, count from this session
         uploads = db.execute(
-            'SELECT COUNT(*) as count FROM memes WHERE uploader_session = ? AND uploader_user_id IS NULL',
+            'SELECT COUNT(*) as count FROM memes WHERE session_id = ? AND user_id IS NULL',
             (session_id,)
         ).fetchone()['count']
         
@@ -152,7 +152,7 @@ def transfer_anonymous_data(db, session_id, user_id):
     """Transfer anonymous session data to registered user"""
     # Update memes uploaded in this session
     db.execute(
-        'UPDATE memes SET uploader_user_id = ? WHERE uploader_session = ? AND uploader_user_id IS NULL',
+        'UPDATE memes SET user_id = ? WHERE session_id = ? AND user_id IS NULL',
         (user_id, session_id)
     )
     
@@ -164,7 +164,7 @@ def transfer_anonymous_data(db, session_id, user_id):
     
     # Update user's total counts
     meme_count = db.execute(
-        'SELECT COUNT(*) as count FROM memes WHERE uploader_user_id = ?',
+        'SELECT COUNT(*) as count FROM memes WHERE user_id = ?',
         (user_id,)
     ).fetchone()['count']
     
@@ -183,7 +183,7 @@ def transfer_anonymous_data(db, session_id, user_id):
 def get_user_own_meme_ids(db, user_id):
     """Get IDs of memes uploaded by the user"""
     memes = db.execute(
-        'SELECT id FROM memes WHERE uploader_user_id = ?',
+        'SELECT id FROM memes WHERE user_id = ?',
         (user_id,)
     ).fetchall()
     return [m['id'] for m in memes]
@@ -222,7 +222,7 @@ class AppSession:
             self.max_upload = current_app.config['REG_MAX_UPLOAD']
             self.max_eval = current_app.config['REG_MAX_EVAL']
         else:
-            self.upload_count = self.db.execute('SELECT COUNT(*) as count FROM memes WHERE uploader_session = ? AND uploader_user_id IS NULL', (self.session_id,)).fetchone()['count'] or 0
+            self.upload_count = self.db.execute('SELECT COUNT(*) as count FROM memes WHERE session_id = ? AND user_id IS NULL', (self.session_id,)).fetchone()['count'] or 0
             self.eval_count = self.db.execute('SELECT COUNT(*) as count FROM evaluations WHERE session_id = ? AND user_id IS NULL', (self.session_id,)).fetchone()['count'] or 0
             self.evaluation_accuracy = None  # Anon users don't have accuracy
             self.max_upload = current_app.config['ANON_MAX_UPLOAD']
@@ -238,9 +238,9 @@ class AppSession:
 
     def get_own_meme_ids(self):
         if self.current_user:
-            memes = self.db.execute('SELECT id FROM memes WHERE uploader_user_id = ?', (self.user_id,)).fetchall()
+            memes = self.db.execute('SELECT id FROM memes WHERE user_id = ?', (self.user_id,)).fetchall()
         else:
-            memes = self.db.execute('SELECT id FROM memes WHERE uploader_session = ? AND uploader_user_id IS NULL', (self.session_id,)).fetchall()
+            memes = self.db.execute('SELECT id FROM memes WHERE session_id = ? AND user_id IS NULL', (self.session_id,)).fetchall()
         return set(m['id'] for m in memes)
 
     def increment_upload(self):
@@ -270,23 +270,6 @@ class AppSession:
             ).fetchone()
         return result['count'] if result else 0
 
-    # def get_available_memes(self):
-    #     own_meme_ids = self.get_own_meme_ids()
-    #     evaluated_meme_ids = set(
-    #         m['meme_id'] for m in self.db.execute(
-    #             'SELECT meme_id FROM evaluations WHERE user_id = ? OR session_id = ?',
-    #             (self.user_id if self.current_user else None, self.session_id)
-    #         ).fetchall()
-    #     )
-    #     excluded_ids = own_meme_ids | evaluated_meme_ids
-    #     if not excluded_ids:
-    #         result = self.db.execute('SELECT COUNT(*) as count FROM memes').fetchone()
-    #     else:
-    #         result = self.db.execute(
-    #             'SELECT COUNT(*) as count FROM memes WHERE id NOT IN ({})'.format(','.join('?' * len(excluded_ids))),
-    #             tuple(excluded_ids)
-    #         ).fetchone()
-    #     return result['count'] if result else 0        
 
 class Pagination:
     def __init__(self, page, per_page, total_count):

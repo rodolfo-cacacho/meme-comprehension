@@ -174,18 +174,53 @@ def profile():
         flash('Please register or log in to view your profile.')
         return redirect(url_for('auth.register'))
     
+    # Number of memes to show, with a default of 5
+    limit = request.args.get('limit', default=5, type=int)
+    eval_limit = request.args.get('eval_limit', default=5, type=int)
+    
     try:
         # Get user's recent memes with analytics
         recent_memes = db.execute('''
-            SELECT m.*, 
-                   COALESCE(a.accuracy_rate, 0.0) as accuracy_rate, 
-                   COALESCE(a.total_evaluations, 0) as total_evaluations
-            FROM memes m
-            LEFT JOIN meme_analytics a ON m.id = a.meme_id
-            WHERE m.uploader_user_id = ?
-            ORDER BY m.upload_date DESC
-            LIMIT 10
-        ''', (current_user['id'],)).fetchall()
+        SELECT 
+            m.*,
+            COUNT(e.id) AS num_evaluations,
+            COALESCE(
+                (SELECT d.description
+                 FROM meme_descriptions d
+                 WHERE d.meme_id = m.id
+                 ORDER BY (d.likes - d.dislikes) DESC, d.created_at DESC
+                 LIMIT 1),
+                ''
+            ) AS meme_content
+        FROM memes m
+        LEFT JOIN evaluations e 
+            ON m.id = e.meme_id
+        WHERE m.user_id = ?
+        GROUP BY m.id
+        ORDER BY m.upload_date DESC
+        LIMIT ?;
+        ''', (current_user['id'], limit)).fetchall()
+
+        recent_eval_memes = db.execute('''
+        SELECT 
+            m.*,
+            COUNT(e.id) AS num_evaluations,
+            COALESCE(
+                (SELECT d.description
+                 FROM meme_descriptions d
+                 WHERE d.meme_id = m.id
+                 ORDER BY (d.likes - d.dislikes) DESC, d.created_at DESC
+                 LIMIT 1),
+                ''
+            ) AS meme_content
+        FROM memes m
+        LEFT JOIN evaluations e 
+            ON m.id = e.meme_id
+        WHERE e.user_id = ?
+        GROUP BY m.id
+        ORDER BY m.upload_date DESC
+        LIMIT ?;
+        ''', (current_user['id'],eval_limit)).fetchall()
         
         # Get evaluation statistics
         evaluation_stats_raw = db.execute('''
@@ -239,6 +274,28 @@ def profile():
         
         # Get total evaluations for the user
         total_evals = current_user['total_evaluations'] if current_user['total_evaluations'] else 0
+
+        # Most liked meme
+        most_liked_meme = db.execute("""
+            SELECT m.*, COUNT(e.id) AS num_evaluations
+            FROM memes m
+            LEFT JOIN evaluations e ON m.id = e.meme_id
+            WHERE m.user_id = ?
+            GROUP BY m.id
+            ORDER BY m.likes DESC
+            LIMIT 1;
+        """, (current_user["id"],)).fetchone()
+
+        # Most evaluated meme
+        most_evaluated_meme = db.execute("""
+            SELECT m.*, COUNT(e.id) AS num_evaluations
+            FROM memes m
+            LEFT JOIN evaluations e ON m.id = e.meme_id
+            WHERE m.user_id = ?
+            GROUP BY m.id
+            ORDER BY num_evaluations DESC
+            LIMIT 1;
+        """, (current_user["id"],)).fetchone()
         
     except Exception as e:
         print(f"Error in profile route: {e}")
@@ -246,6 +303,9 @@ def profile():
         traceback.print_exc()
         # Fallback to safe defaults
         recent_memes = []
+        most_liked_meme = None
+        most_evaluated_meme = None
+        recent_eval_memes = []
         evaluation_stats = {
             'total_evaluations': 0,
             'correct_evaluations': 0,
@@ -256,13 +316,19 @@ def profile():
         accuracy_rate = 0
         total_evals = 0
     
+    # Normal full-page render
     return render_template('auth/profile.html',
-                         contributor=current_user,
-                         recent_memes=recent_memes,
-                         evaluation_stats=evaluation_stats,
-                         contributor_rank=contributor_rank,
-                         accuracy_rate=accuracy_rate,
-                         total_evals=total_evals)
+                        contributor=current_user,
+                        recent_memes=recent_memes,
+                        recent_eval_memes=recent_eval_memes,
+                        evaluation_stats=evaluation_stats,
+                        contributor_rank=contributor_rank,
+                        accuracy_rate=accuracy_rate,
+                        total_evals=total_evals,
+                        limit=limit,
+                        eval_limit=eval_limit,
+                        most_liked_meme=most_liked_meme,
+                        most_evaluated_meme=most_evaluated_meme)
 
 # Helper functions
 def send_login_link(email):
