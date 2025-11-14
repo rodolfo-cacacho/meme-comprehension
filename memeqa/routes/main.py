@@ -43,8 +43,22 @@ def index():
     available_memes = db.execute('SELECT COUNT(*) as count FROM memes').fetchone()['count']
     evaluation_count = get_evaluation_count()
     
-    # Check if user can upload (after 5 evaluations or if less than 5 memes exist)
-    can_upload = evaluation_count >= EVAL_COUNT or available_memes < MIN_MEME_COUNT
+    # Leaderboards (registered users only)
+    top_uploaders = db.execute('''
+        SELECT name, total_submissions
+        FROM users
+        WHERE is_active = 1
+        ORDER BY total_submissions DESC
+        LIMIT 5
+    ''').fetchall()
+
+    top_evaluators = db.execute('''
+        SELECT name, total_evaluations
+        FROM users
+        WHERE is_active = 1
+        ORDER BY total_evaluations DESC
+        LIMIT 5
+    ''').fetchall()
     
     return render_template('main/index.html',
         current_user=current_user,
@@ -52,8 +66,9 @@ def index():
         eval_mems=EVAL_COUNT,
         memes_min=MIN_MEME_COUNT,
         available_memes=available_memes,
-        can_upload=can_upload,  # Now calculated!
-        development=DEVELOPMENT
+        development=DEVELOPMENT,
+        top_uploaders=top_uploaders,
+        top_evaluators=top_evaluators,
     )
 
 @bp.route('/stats')

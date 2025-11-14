@@ -80,6 +80,68 @@
             <hr>
         {% endif %}
 
+        {% if not is_user_owner %}
+
+        <!-- METRICS VISUALIZATION -->
+        <div class="mb-4">
+            <h5 class="mb-3">Evaluation Metrics</h5>
+            <!-- Progress Bar: Overall Score -->
+            <div class="mb-3">
+                <label>Average Correctness</label>
+                <div class="progress" style="height: 28px;">
+                  <div class="progress-bar bg-success" role="progressbar"
+                       style="width: {{ metrics.progress.avg }}%;" aria-valuenow="{{ metrics.progress.avg }}"
+                       aria-valuemin="0" aria-valuemax="100">
+                    {{ metrics.progress.avg }}%
+                  </div>
+                  {% if metrics.progress.user %}
+                  <div class="progress-bar bg-info" role="progressbar"
+                       style="width: 4%; left: {{ metrics.progress.user }}%;" aria-valuenow="{{ metrics.progress.user }}"
+                       aria-valuemin="0" aria-valuemax="100">
+                    <span class="d-none d-md-inline" style="position: absolute; left: -18px; font-size: 0.9em;">
+                      You
+                    </span>
+                  </div>
+                  {% endif %}
+                </div>
+                <small class="text-muted">Average correctness across all evaluators. <span class="text-info">{% if metrics.progress.user %}Your score: {{ metrics.progress.user }}%{% endif %}</span></small>
+            </div>
+
+            <!-- Donut Chart: TP/FP/FN -->
+            <div class="mb-3">
+                <label>TP / FP / FN Overview</label>
+                <div style="max-width: 340px;">
+                  <canvas id="donutChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Humor Type Bar Chart -->
+            <div class="mb-3">
+                <label>Humor Type Correctness</label>
+                <div style="max-width: 600px;">
+                  <canvas id="humorBarChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Emotion Bar Chart -->
+            <div class="mb-3">
+                <label>Emotions Correctness</label>
+                <div style="max-width: 600px;">
+                  <canvas id="emotionBarChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Score Distribution Histogram -->
+            <div class="mb-3">
+                <label>Score Distribution (All Evaluators)</label>
+                <div style="max-width: 600px;">
+                  <canvas id="scoreHistChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        {% endif %}
+
         <!-- DESCRIPTIONS -->
         <h5>Descriptions</h5>
 
@@ -130,6 +192,89 @@ document.addEventListener('click', async function(e) {
         btn.innerHTML = '<i class="bi bi-heart text-danger fs-3"></i>';
     }
 });
+// Chart.js visualizations
+document.addEventListener('DOMContentLoaded', function() {
+    // Donut Chart
+    var donutCtx = document.getElementById('donutChart').getContext('2d');
+    var donutData = {
+        labels: ['TP', 'FP', 'FN'],
+        datasets: [{
+            data: [{{ metrics.donut.tp }}, {{ metrics.donut.fp }}, {{ metrics.donut.fn }}],
+            backgroundColor: ['#198754', '#fd7e14', '#dc3545']
+        }]
+    };
+    new Chart(donutCtx, {
+        type: 'doughnut',
+        data: donutData,
+        options: {
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+
+    // Humor Bar Chart
+    var humorBarCtx = document.getElementById('humorBarChart').getContext('2d');
+    var humorBarData = {
+        labels: {{ metrics.humor_bar.labels|tojson }},
+        datasets: [{
+            label: 'Correctness (%)',
+            data: {{ metrics.humor_bar.accuracies|tojson }},
+            backgroundColor: '#0d6efd'
+        }]
+    };
+    new Chart(humorBarCtx, {
+        type: 'bar',
+        data: humorBarData,
+        options: {
+            scales: {
+                y: { beginAtZero: true, max: 100 }
+            }
+        }
+    });
+
+    // Emotion Bar Chart
+    var emotionBarCtx = document.getElementById('emotionBarChart').getContext('2d');
+    var emotionBarData = {
+        labels: {{ metrics.emotion_bar.labels|tojson }},
+        datasets: [{
+            label: 'Correctness (%)',
+            data: {{ metrics.emotion_bar.accuracies|tojson }},
+            backgroundColor: '#20c997'
+        }]
+    };
+    new Chart(emotionBarCtx, {
+        type: 'bar',
+        data: emotionBarData,
+        options: {
+            scales: {
+                y: { beginAtZero: true, max: 100 }
+            }
+        }
+    });
+
+    // Score Histogram
+    var scoreHistCtx = document.getElementById('scoreHistChart').getContext('2d');
+    var scoreHistData = {
+        labels: {{ metrics.score_hist.labels|tojson }},
+        datasets: [{
+            label: 'Number of Evaluators',
+            data: {{ metrics.score_hist.counts|tojson }},
+            backgroundColor: '#6610f2'
+        }]
+    };
+    new Chart(scoreHistCtx, {
+        type: 'bar',
+        data: scoreHistData,
+        options: {
+            scales: {
+                y: { beginAtZero: true, precision: 0 }
+            }
+        }
+    });
+});
+
 </script>
+
 
 {% endblock %}

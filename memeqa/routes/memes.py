@@ -284,8 +284,8 @@ def upload_file():
                                      form_data=form_data)
             
             # Convert lists to strings/JSON as needed
-            languages = ', '.join(form_data['languages']) if form_data['languages'] else ''
-            humors = ', '.join(form_data['humors']) if form_data['humors'] else ''
+            languages_json = json.dumps(form_data['languages'] if form_data['languages'] else [])
+            humors_json = json.dumps(form_data['humors'] if form_data['humors'] else [])
             emotions_json = json.dumps(form_data['emotions'] if form_data['emotions'] else [])
             
             # Use current user data if available, otherwise form data
@@ -324,7 +324,7 @@ def upload_file():
                     filename, original_filename, contributor_name, contributor_email,
                     contributor_country, form_data['platform_found'], 
                     app_session.session_id, uploader_user_id,
-                    languages, humors, emotions_json, form_data['context_level'],
+                    languages_json, humors_json, emotions_json, form_data['context_level'],
                     form_data['terms_agreement']
                 ))
                 
@@ -469,6 +469,11 @@ def meme_detail(meme_id):
     db = get_db()
 
     current_user = get_current_user(db)
+    
+    # Restrict gallery to registered users only
+    if not current_user:
+        flash('Please register or log in to view individual memes.', 'error')
+        return redirect(url_for('auth.register'))
 
     # Retrieve navigation state
     gallery_page = request.args.get('page', 1, type=int)
@@ -476,11 +481,13 @@ def meme_detail(meme_id):
     filter_type = request.args.get('filter', 'all')
 
     user_id = current_user['id'] if current_user else None
+    config = current_app.config
+    # Extract string lists for humor and emotion types
+    HUMOR_TYPE_LIST = [h['type'] for h in config['HUMOR_TYPES']]
+    EMOTION_TYPE_LIST = [e['emotion'] for e in config['EMOTIONS_TYPES']]
+    HUMOR_TYPES = HUMOR_TYPE_LIST
+    EMOTIONS_TYPES = EMOTION_TYPE_LIST
 
-    # # Restrict gallery to registered users only
-    # if not current_user:
-    #     flash('Please register or log in to view individual memes.', 'error')
-    #     return redirect(url_for('auth.register'))
 
     # User’s own evaluation (if exists)
     user_eval = None
@@ -574,8 +581,6 @@ def meme_detail(meme_id):
     # Page for back-to-gallery
     gallery_page_for_current_meme = get_meme_page(meme_list, meme_id, per_page)
 
-
-
     # Likes count
     likes_count = db.execute(
         "SELECT COUNT(*) AS c FROM meme_likes WHERE meme_id = ?", 
@@ -628,8 +633,170 @@ def meme_detail(meme_id):
     if not meme:
         abort(404)
 
-    # If you later add descriptions, evaluations, etc., fetch them here
-    # descriptions = ...
+    # --- Compute evaluator metrics and category-level correctness ---
+    # 1. Get ground truth (creator's annotation) for humor_type and emotions_conveyed
+    try:
+        meme_humor_types = json.loads(meme["humor_type"]) if meme["humor_type"] else []
+    except Exception:
+        meme_humor_types = []
+    try:
+        meme_emotions = json.loads(meme["emotions_conveyed"]) if meme["emotions_conveyed"] else []
+    except Exception:
+        meme_emotions = []
+
+    # 2. Get all evaluations for this meme
+    eval_rows = db.execute(
+        "SELECT * FROM evaluations WHERE meme_id = ?",
+        (meme_id,)
+    ).fetchall()
+
+    # 3. For each evaluation, parse humor_type/emotions and compute TP/FP/FN per category
+    metrics = {
+        "total": len(eval_rows),
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "score_sum": 0,
+        "score_max": 0,
+        "score_user": None
+    }
+    category_results = {
+        "humor": {ht: {"tp": 0, "fp": 0, "fn": 0, "correct": 0, "total": 0} for ht in HUMOR_TYPE_LIST},
+        "emotion": {et: {"tp": 0, "fp": 0, "fn": 0, "correct": 0, "total": 0} for et in EMOTION_TYPE_LIST}
+    }
+    score_distribution = []
+
+    for row in eval_rows:
+        # Humor
+        try:
+            eval_humors = json.loads(row["evaluated_humor_type"]) if row["evaluated_humor_type"] else []
+        except Exception:
+            eval_humors = []
+        try:
+            eval_humors = [str(h) for h in eval_humors]
+        except Exception:
+            pass
+        # Emotions
+        try:
+            eval_emotions = json.loads(row["evaluated_emotions"]) if row["evaluated_emotions"] else []
+        except Exception:
+            eval_emotions = []
+        try:
+            eval_emotions = [str(e) for e in eval_emotions]
+        except Exception:
+            pass
+
+        # Set of ground-truth and eval for comparison (ensure all are strings)
+        gt_humors = set(str(h) for h in meme_humor_types)
+        gt_emotions = set(str(e) for e in meme_emotions)
+        pred_humors = set(str(h) for h in eval_humors)
+        pred_emotions = set(str(e) for e in eval_emotions)
+
+        # TP/FP/FN for humor
+        for ht in HUMOR_TYPE_LIST:
+            in_gt = ht in gt_humors
+            in_pred = ht in pred_humors
+            if in_gt and in_pred:
+                category_results["humor"][ht]["tp"] += 1
+                category_results["humor"][ht]["correct"] += 1
+            elif not in_gt and in_pred:
+                category_results["humor"][ht]["fp"] += 1
+            elif in_gt and not in_pred:
+                category_results["humor"][ht]["fn"] += 1
+            # Count total times this category is present in ground truth or prediction
+            if in_gt or in_pred:
+                category_results["humor"][ht]["total"] += 1
+
+        # TP/FP/FN for emotions
+        for et in EMOTION_TYPE_LIST:
+            in_gt = et in gt_emotions
+            in_pred = et in pred_emotions
+            if in_gt and in_pred:
+                category_results["emotion"][et]["tp"] += 1
+                category_results["emotion"][et]["correct"] += 1
+            elif not in_gt and in_pred:
+                category_results["emotion"][et]["fp"] += 1
+            elif in_gt and not in_pred:
+                category_results["emotion"][et]["fn"] += 1
+            if in_gt or in_pred:
+                category_results["emotion"][et]["total"] += 1
+
+        # Overall TP/FP/FN for this evaluation
+        eval_tp = len(gt_humors & pred_humors) + len(gt_emotions & pred_emotions)
+        eval_fp = len((pred_humors - gt_humors)) + len((pred_emotions - gt_emotions))
+        eval_fn = len((gt_humors - pred_humors)) + len((gt_emotions - pred_emotions))
+        metrics["tp"] += eval_tp
+        metrics["fp"] += eval_fp
+        metrics["fn"] += eval_fn
+
+        # Score: simple metric = TP / (TP+FP+FN) if denominator > 0
+        denom = eval_tp + eval_fp + eval_fn
+        score = eval_tp / denom if denom > 0 else 1.0
+        metrics["score_sum"] += score
+        if score > metrics["score_max"]:
+            metrics["score_max"] = score
+        # For score distribution (10 bins)
+        score_distribution.append(score)
+        # If this is the current user's evaluation, store their score
+        if user_eval and row["id"] == user_eval["id"]:
+            metrics["score_user"] = score
+
+    # For Chart.js, prepare score distribution histogram (10 bins)
+    import math
+    bins = [0] * 10
+    for s in score_distribution:
+        idx = min(9, int(s * 10))
+        bins[idx] += 1
+    score_hist = {
+        "labels": [f"{i*10}-{(i+1)*10}%" for i in range(10)],
+        "counts": bins
+    }
+
+    # For donut chart: sum all tp/fp/fn
+    donut = {
+        "tp": metrics["tp"],
+        "fp": metrics["fp"],
+        "fn": metrics["fn"]
+    }
+    # For progress bar: overall average score (as percent)
+    metrics["score_avg"] = (metrics["score_sum"] / metrics["total"]) if metrics["total"] > 0 else 0
+    metrics["score_avg_pct"] = int(round(metrics["score_avg"] * 100))
+    metrics["score_user_pct"] = int(round(metrics["score_user"] * 100)) if metrics["score_user"] is not None else None
+
+    # For category bar charts: accuracy = correct/total per category
+    humor_bar = {
+        "labels": HUMOR_TYPE_LIST,
+        "accuracies": [
+            (category_results["humor"][ht]["correct"] / category_results["humor"][ht]["total"] * 100)
+            if category_results["humor"][ht]["total"] > 0 else 0
+            for ht in HUMOR_TYPE_LIST
+        ]
+    }
+    emotion_bar = {
+        "labels": EMOTION_TYPE_LIST,
+        "accuracies": [
+            (category_results["emotion"][et]["correct"] / category_results["emotion"][et]["total"] * 100)
+            if category_results["emotion"][et]["total"] > 0 else 0
+            for et in EMOTION_TYPE_LIST
+        ]
+    }
+
+    # Compose all statistics for the template
+    meme_metrics = {
+        "donut": donut,
+        "progress": {
+            "avg": metrics["score_avg_pct"],
+            "user": metrics["score_user_pct"]
+        },
+        "humor_bar": humor_bar,
+        "emotion_bar": emotion_bar,
+        "score_hist": score_hist,
+        "total_evals": metrics["total"]
+    }
+
+    print(f'Meme Metrics: {meme_metrics}')
+
+    
 
     return render_template(
         "memes/meme_detail.html",
@@ -646,7 +813,12 @@ def meme_detail(meme_id):
         prev_id=prev_id,
         prev_page=prev_page,
         next_id=next_id,
-        next_page=next_page
+        next_page=next_page,
+        metrics=meme_metrics,
+        category_results=category_results,
+        score_distribution=score_hist,
+        HUMOR_TYPES=HUMOR_TYPES,
+        EMOTIONS_TYPES=EMOTIONS_TYPES
     )
 
 def get_meme_page(meme_list, target_id, per_page):

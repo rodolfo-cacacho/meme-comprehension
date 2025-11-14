@@ -266,16 +266,9 @@
                 <div class="text-center text-muted py-4">
                     <i class="bi bi-upload display-4 text-muted mb-3"></i>
                     <p>You haven't contributed any memes yet.</p>
-                    {% if total_evals >= eval_mems %}
-                        <a href="{{ url_for('memes.upload_file') }}" class="btn btn-success">
-                            <i class="bi bi-upload"></i> Upload Your First Meme
-                        </a>
-                    {% else %}
-                        <p class="small">Complete {{ eval_mems - total_evals }} more evaluations to unlock uploads!</p>
-                        <a href="{{ url_for('evaluations.evaluate') }}" class="btn btn-primary">
-                            <i class="bi bi-play"></i> Continue Evaluating
-                        </a>
-                    {% endif %}
+                    <a href="{{ url_for('memes.upload_file') }}" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Upload Your First Meme
+                    </a>
                 </div>
                 {% endif %}
             </div>
@@ -359,14 +352,14 @@
                 <div class="text-center text-muted py-4">
                     <i class="bi bi-upload display-4 text-muted mb-3"></i>
                     <p>You haven't evaluated any memes yet.</p>
-                    {% if total_evals >= eval_mems %}
+                    {% if app_session.get_available_memes() == 0 %}
                         <a href="{{ url_for('memes.upload_file') }}" class="btn btn-success">
-                            <i class="bi bi-upload"></i> Upload Your First Meme
+                            <i class="bi bi-upload"></i> Continue Uploading Memes
                         </a>
                     {% else %}
-                        <p class="small">Complete {{ eval_mems - total_evals }} more evaluations to unlock uploads!</p>
+                        <p class="small">Evaluate Memes</p>
                         <a href="{{ url_for('evaluations.evaluate') }}" class="btn btn-primary">
-                            <i class="bi bi-play"></i> Continue Evaluating
+                            <i class="bi bi-play"></i> Start Evaluating
                         </a>
                     {% endif %}
                 </div>
@@ -426,18 +419,18 @@
                 
         <!-- Quick Actions -->
         <div class="row mt-4 mb-4">
+            {% if app_session.get_available_memes() > 0 %}
             <div class="col-md-4 mb-2">
                 <a href="{{ url_for('evaluations.evaluate') }}" class="btn btn-outline-primary w-100">
                     <i class="bi bi-check-square"></i> Continue Evaluating
                 </a>
             </div>
-            {% if total_evals >= eval_mems %}
+            {% endif %}
             <div class="col-md-4 mb-2">
                 <a href="{{ url_for('memes.upload_file') }}" class="btn btn-outline-success w-100">
                     <i class="bi bi-upload"></i> Upload Meme
                 </a>
             </div>
-            {% endif %}
             <div class="col-md-4 mb-2">
                 <a href="{{ url_for('memes.gallery') }}" class="btn btn-outline-info w-100">
                     <i class="bi bi-images"></i> Browse Gallery

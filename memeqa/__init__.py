@@ -121,41 +121,7 @@ def create_app():
                 )
             ''', (session_id, session_id)).fetchone()['count']
         }
-    # @app.context_processor
-    # def inject_user_data():
-    #     """Make user data available in all templates"""
-    #     from memeqa.database import get_db
-    #     from memeqa.utils import get_current_user
-    #     from flask import session
-    #     import uuid
-        
-    #     # Get current user
-    #     db = get_db()
-    #     current_user = get_current_user(db)
-        
-    #     # Get evaluation count for the current session/user
-    #     session_id = session.get('session_id', str(uuid.uuid4()))
-        
-    #     if current_user:
-    #         eval_count_result = db.execute(
-    #             'SELECT COUNT(*) as count FROM evaluations WHERE user_id = ?',
-    #             (current_user['id'],)
-    #         ).fetchone()
-    #         eval_count = eval_count_result['count'] if eval_count_result else 0
-    #     else:
-    #         eval_count_result = db.execute(
-    #             'SELECT COUNT(*) as count FROM evaluations WHERE session_id = ? AND user_id IS NULL',
-    #             (session_id,)
-    #         ).fetchone()
-    #         eval_count = eval_count_result['count'] if eval_count_result else 0
-        
-    #     return {
-    #         'current_user': current_user,
-    #         'eval_count': eval_count,
-    #         'get_user_evaluation_count': lambda: eval_count  # For templates that call it as function
-    #     }
-    
-    # Add this context processor
+  
     @app.context_processor
     def inject_app_info():
         """Make app info available to all templates"""
