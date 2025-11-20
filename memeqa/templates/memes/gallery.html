@@ -67,23 +67,37 @@
                         
                         <!-- Additional metadata badges -->
                         <div class="mb-2">
-                            {% if meme.humor_type %}
-                                {% for item in meme.humor_type.split(',') %}
+                            {% if meme.humor_type_list %}
+                                {% for item in meme.humor_type_list %}
                                     <span class="badge bg-warning text-dark me-1">
                                         {{ item.strip() }}
                                     </span>
                                 {% endfor %}
                             {% endif %}
-                            {% if meme.context_level %}
-                                <span class="badge bg-info text-white me-1">{{ meme.context_level }}</span>
+                            {% if meme.emotions_conveyed_list %}
+                                {% for item in meme.emotions_conveyed_list %}
+                                    <span class="badge bg-success me-1">
+                                        {{ item.strip() }}
+                                    </span>
+                                {% endfor %}
                             {% endif %}
                         </div>
                         
+                        <!-- Context level-->
+                         {% if meme.context_level %}
+                         <div class="mb-2">
+                                <span class="badge bg-info text-dark me-1">{{ meme.context_level }}</span>
+                        {% endif %}
+                         </div>
+
                         <!-- Origin info if available -->
-                        {% if meme.languages%}
+                        {% if meme.languages_list %}
                         <div class="mb-2">
                             <small class="text-muted">
-                                <i class="bi bi-translate"></i> {{ meme.languages }}
+                                <i class="bi bi-translate"></i>
+                                {% for lang in meme.languages_list %}
+                                    {{ lang }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
                             </small>
                         </div>
                         {% endif %}
@@ -195,7 +209,8 @@
             <div class="col-md-6">
                 <small class="text-muted">
                     <span class="badge bg-warning text-dark me-1">Humor</span> Humor Type<br>
-                    <span class="badge bg-info me-1">Reach</span> Cultural reach<br>
+                    <span class="badge bg-success me-1">Emotion</span> Emotion Type<br>
+                    <span class="badge bg-info text-dark me-1">Reach</span> Cultural reach<br>
                     <i class="bi bi-calendar"></i> Upload date
                 </small>
             </div>

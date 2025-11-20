@@ -1,7 +1,7 @@
 # memeqa/routes/auth.py
 from flask import Blueprint, render_template, request, flash, redirect, url_for, session, current_app
 from memeqa.database import get_db
-from memeqa.utils import get_current_user, generate_login_token, verify_login_token, send_email
+from memeqa.utils import get_current_user, generate_login_token, verify_login_token, send_email,parse_json_columns
 from datetime import datetime
 
 bp = Blueprint('auth', __name__)
@@ -201,6 +201,9 @@ def profile():
         LIMIT ?;
         ''', (current_user['id'], limit)).fetchall()
 
+        if recent_memes:
+            recent_memes = parse_json_columns(recent_memes, ['humor_type', 'emotions_conveyed','languages'])
+
         recent_eval_memes = db.execute('''
         SELECT 
             m.*,
@@ -221,6 +224,9 @@ def profile():
         ORDER BY m.upload_date DESC
         LIMIT ?;
         ''', (current_user['id'],eval_limit)).fetchall()
+
+        if recent_eval_memes:
+            recent_eval_memes = parse_json_columns(recent_eval_memes, ['humor_type', 'emotions_conveyed','languages'])
         
         # Get evaluation statistics
         evaluation_stats_raw = db.execute('''

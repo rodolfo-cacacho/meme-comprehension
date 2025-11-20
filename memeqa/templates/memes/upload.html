@@ -15,9 +15,9 @@
         <!-- Validation Alerts Container -->
         <div id="validation-alerts" class="mb-3"></div>
         
-        <form method="post" enctype="multipart/form-data" id="memeUploadForm">
+        <form method="post" enctype="multipart/form-data" id="memeUploadForm" class="disable-global-loader">
             <!-- User Information Section -->
-            {% if not current_user %}
+            {% if not app_session.current_user %}
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-primary text-white">
                     <h4 class="mb-0">👤 Contributor Information</h4>
@@ -251,7 +251,7 @@
 </div>
 
 <!-- Login Modal for anonymous users -->
-{% if not current_user %}
+{% if not app_session.current_user %}
 <div class="modal fade" id="loginModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -293,12 +293,17 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Configuration
     const CONFIG = {
-        maxFileSize: 16 * 1024 * 1024, // 16MB
-        validImageTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
-        autoSaveInterval: 30000, // 30 seconds
-        birthYearMin: 1900,
-        birthYearMax: new Date().getFullYear()
-    };
+    maxFileSize: 16 * 1024 * 1024,
+    validImageTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
+    autoSaveInterval: 30000,
+    birthYearMin: 1900,
+    birthYearMax: new Date().getFullYear(),
+    {% if not app_session.current_user %}
+    countries: {{ config.COUNTRIES | tojson }}
+    {% else %}
+    countries: []
+    {% endif %}
+};
     
     // Field labels mapping
     const FIELD_LABELS = {
@@ -391,16 +396,27 @@ document.addEventListener('DOMContentLoaded', function() {
     function validateField(fieldId) {
         const field = document.getElementById(fieldId);
         if (!field) return true;
-        
+
         let isValid = true;
         let errorMessage = '';
-        
-        // Check required fields
+
+        // Required fields
         if (field.hasAttribute('required') && !field.value.trim()) {
             isValid = false;
             errorMessage = `${getFieldLabel(fieldId)} is required`;
         }
-        
+
+        // Special validation for contributor_country (only anonymous users)
+        {% if not app_session.current_user %}
+        if (fieldId === 'contributor_country' && field.value.trim()) {
+            const value = field.value.trim();
+            if (!CONFIG.countries.includes(value)) {
+                isValid = false;
+                errorMessage = 'Select a valid country from the list';
+            }
+        }
+        {% endif %}
+
         // Special validation for birth_year
         if (fieldId === 'birth_year' && field.value) {
             const year = parseInt(field.value, 10);
@@ -409,13 +425,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 errorMessage = `Birth year must be between ${CONFIG.birthYearMin} and ${CONFIG.birthYearMax}`;
             }
         }
-        
-        if (isValid) {
-            clearFieldError(fieldId);
-        } else {
-            showFieldError(fieldId, errorMessage);
-        }
-        
+
+        if (isValid) clearFieldError(fieldId);
+        else showFieldError(fieldId, errorMessage);
+
         return isValid;
     }
     

@@ -57,69 +57,7 @@ def create_app():
 
         app_session = AppSession(get_current_user(get_db()))
         return {
-            'app_session': app_session,
-            'current_user': app_session.current_user,
-            'upload_count': app_session.upload_count,
-            'eval_count': app_session.eval_count,
-            'can_upload': app_session.check_limits()['can_upload'],
-            'can_evaluate': app_session.check_limits()['can_evaluate'],
-            'limit_reason': app_session.check_limits().get('reason')
-        }
-
-    @app.context_processor
-    def inject_user_data():
-        """Make user data available in all templates"""
-        from memeqa.database import get_db
-        from memeqa.utils import get_current_user
-        from flask import session
-        import uuid
-        
-        # Get current user
-        db = get_db()
-        current_user = get_current_user(db)
-        
-        # Get evaluation count for the current session/user
-        session_id = session.get('session_id', str(uuid.uuid4()))
-        
-        if current_user:
-            eval_count_result = db.execute(
-                'SELECT COUNT(*) as count FROM evaluations WHERE user_id = ?',
-                (current_user['id'],)
-            ).fetchone()
-            eval_count = eval_count_result['count'] if eval_count_result else 0
-            upload_count = 0  # Not needed for registered users
-        else:
-            eval_count_result = db.execute(
-                'SELECT COUNT(*) as count FROM evaluations WHERE session_id = ? AND user_id IS NULL',
-                (session_id,)
-            ).fetchone()
-            eval_count = eval_count_result['count'] if eval_count_result else 0
-            
-            # Get upload count for anonymous users
-            upload_count_result = db.execute(
-                'SELECT COUNT(*) as count FROM memes WHERE session_id = ? AND user_id IS NULL',
-                (session_id,)
-            ).fetchone()
-            upload_count = upload_count_result['count'] if upload_count_result else 0
-        
-        return {
-            'current_user': current_user,
-            'eval_count': eval_count,
-            'upload_count': upload_count if not current_user else 0,
-            'get_user_evaluation_count': lambda: eval_count,
-            'get_total_memes': lambda: db.execute('SELECT COUNT(*) as count FROM memes').fetchone()['count'],
-            'get_available_memes_for_user': lambda: db.execute('''
-                SELECT COUNT(*) as count FROM memes 
-                WHERE user_id != ? 
-                AND id NOT IN (SELECT meme_id FROM evaluations WHERE user_id = ?)
-            ''', (current_user['id'], current_user['id'])).fetchone()['count'] if current_user else db.execute('''
-                SELECT COUNT(*) as count FROM memes 
-                WHERE session_id != ? 
-                AND id NOT IN (
-                    SELECT meme_id FROM evaluations 
-                    WHERE session_id = ? AND user_id IS NULL
-                )
-            ''', (session_id, session_id)).fetchone()['count']
+            'app_session': app_session
         }
   
     @app.context_processor
@@ -140,6 +78,4 @@ def create_app():
                 'app_last_updated': datetime(2025, 1, 1),
                 'app_version': '2.0 Enhanced'
             }
-
-
     return app

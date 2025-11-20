@@ -8,7 +8,7 @@
             <h1>🧠 Evaluate Meme</h1>
             <div class="text-end">
                 <span class="badge bg-info fs-6 me-2">
-                    {% if current_user %}
+                    {% if app_session.current_user %}
                         Total: {{ app_session.eval_count }}
                     {% else %}
                         Progress: {{ app_session.eval_count }}/{{app_session.max_eval}}
@@ -198,7 +198,7 @@
                     {% endif %}
                 </div>
             </div>
-            {% if current_user %}
+            {% if app_session.current_user %}
 
             <!-- Like Meme -->
             <div class="card bg-light mb-4">

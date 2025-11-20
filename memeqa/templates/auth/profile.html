@@ -233,9 +233,13 @@
                                     </small>
                                 </td>
                                 <td>
-                                    <span class="badge bg-secondary">
-                                        {{ meme.humor_type or 'Unknown' }}
-                                    </span>
+                                    {% if meme.humor_type_list %}
+                                        {% for item in meme.humor_type_list %}
+                                            <span class="badge bg-warning text-dark me-1">
+                                                {{ item.strip()}}
+                                            </span>
+                                        {% endfor %}
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <span class="badge bg-info">
@@ -319,9 +323,13 @@
                                     </small>
                                 </td>
                                 <td>
-                                    <span class="badge bg-secondary">
-                                        {{ meme.humor_type or 'Unknown' }}
-                                    </span>
+                                    {% if meme.humor_type_list %}
+                                        {% for item in meme.humor_type_list %}
+                                            <span class="badge bg-warning text-dark me-1">
+                                                {{ item.strip()}}
+                                            </span>
+                                        {% endfor %}
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <span class="badge bg-info">

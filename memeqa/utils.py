@@ -12,6 +12,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import session, current_app
 from memeqa.database import get_db
+import json
 
 
 def generate_login_token(email, secret_key):
@@ -202,6 +203,40 @@ def list_to_string(items):
     if len(items) == 1:
         return items[0]
     return ", ".join(items[:-1]) + " or " + items[-1]
+
+def parse_json_columns(memes, json_columns):
+    """
+    Parse JSON string columns in meme objects.
+    
+    Args:
+        memes: Single meme object/row or list of meme objects/rows
+        json_columns: List of column names that contain JSON strings
+    """
+    # Handle single meme case
+    is_single = not isinstance(memes, list)
+    meme_list = [memes] if is_single else memes
+    
+    parsed_memes = []
+    for meme in meme_list:
+        # Convert Row to dict
+        meme_dict = dict(meme)
+        
+        # Parse JSON columns
+        for column in json_columns:
+            column_value = meme_dict.get(column)
+            if column_value:
+                try:
+                    parsed = json.loads(column_value)
+                    meme_dict[f'{column}_list'] = parsed if isinstance(parsed, list) else []
+                except (json.JSONDecodeError, TypeError, ValueError):
+                    meme_dict[f'{column}_list'] = []
+            else:
+                meme_dict[f'{column}_list'] = []
+        
+        parsed_memes.append(meme_dict)
+    
+    # Return single dict if input was single meme, otherwise return list
+    return parsed_memes[0] if is_single else parsed_memes
 
 class AppSession:
     def __init__(self, current_user=None):

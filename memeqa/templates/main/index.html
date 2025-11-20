@@ -17,7 +17,6 @@
         <!-- Hero meme image -->
         <div class="card shadow-sm mb-4">
             <div class="card-body text-center">
-                <h5 class="lead">Help us create the ultimate meme understanding dataset!</h5>
                 <img src="static/1ycxgw.jpg" 
                 class="meme-img mb-3" 
                 alt="Gives us your memes">
@@ -32,14 +31,14 @@
                         <div class="text-center">
                             <div class="display-1 mb-2">🧠</div>
                             <h5>Evaluate Memes</h5>
-                            <p class="small text-muted">Analyze memes by identifying their humor types, emotions conveyed, and cultural context. Help us understand what makes memes funny across cultures!</p>
+                            <p class="small text-muted">Analyze memes by evaluating descriptions and identifying their humor types, emotions conveyed, and cultural context. Help us understand what makes memes funny across different cultures!</p>
                         </div>
                     </div>
                     <div class="col-md-4 mb-3">
                         <div class="text-center">
                             <div class="display-1 mb-2">📝</div>
                             <h5>Upload & Classify</h5>
-                            <p class="small text-muted">Share your memes with detailed classifications including humor analysis, emotional mapping, cultural reach, and temporal context.</p>
+                            <p class="small text-muted">Share your memes with detailed classifications including descriptions, humor analysis, emotional mapping, cultural reach, and temporal context.</p>
                         </div>
                     </div>
                     <div class="col-md-4 mb-3">
@@ -133,7 +132,7 @@
                             {% endif %}
                         {% else %}
                             {% set max_evals = [app_session.max_eval, app_session.get_available_memes()]|min %}
-                            <span class="badge bg-primary fs-6">{{ eval_count }}/{{ max_evals }}</span>
+                            <span class="badge bg-primary fs-6">{{ app_session.eval_count }}/{{ max_evals }}</span>
                         {% endif %}
                     </div>
                     
